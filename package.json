@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "alipay": "node alipay.js",
-    "wechat": "node wechat.js"
+    "wechat": "node wechat.js",
+    "icost": "node icost.js"
   },
   "keywords": [
     "csv",

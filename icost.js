@@ -14,7 +14,7 @@ function main() {
     input: process.stdin,
     output: process.stdout
   });
-  query.question('\n***微信账单转换***\n\n\n请输入原文件路径(支持csv和xlsx格式):\n\n', (answer) => {
+  query.question('\n***icost账单转换***\n\n\n请输入原文件路径(支持csv和xlsx格式):\n\n', (answer) => {
     const reg = /\\/g;
     mainProcess(answer.trim().replace(reg, ''));
     query.close();
@@ -36,11 +36,11 @@ async function mainProcess(source) {
     // 转换为数组格式
     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
     
-    // 找到表头行（包含"交易时间"等字段的行）
+    // 找到表头行（包含"日期"等字段的行）
     let headerIndex = -1;
     for (let i = 0; i < jsonData.length; i++) {
       const row = jsonData[i];
-      if (row && row.length > 0 && row.includes('交易时间')) {
+      if (row && row.length > 0 && row.includes('日期')) {
         headerIndex = i;
         break;
       }
@@ -94,40 +94,40 @@ async function mainProcess(source) {
   const transactions = [];
   records.forEach(record => {
     let transaction = {};
-    transaction['日期'] = parseDate(record['交易时间']);
-    transaction['描述'] = record['商品'] == "/" ? record['交易类型'] : record['商品'];
-    transaction['账户'] = mapAccount(record['支付方式']);
-    const fee = isNaN(record['金额(元)']) ? record['金额(元)'].substring(1, record['金额(元)'].length) : record['金额(元)'];
-    if (record['收/支'] == '其他') {
+    transaction['日期'] = parseDate(record['日期']).date;
+    transaction['时间'] = parseDate(record['日期']).time;
+    transaction['描述'] = record['一级分类'] + record['二级分类'];
+    transaction['账户'] = mapAccount(record['账户1']);
+    const fee = isNaN(record['金额']) ? record['金额'].substring(1, record['金额'].length) : record['金额'];
+
+    // record['类型'] 支出  收入 退款入账 转账 还款
+    if (record['类型'] == '转账' || record['类型'] == '还款') {
       // keep alipay's transfer process, because no wechat transfer record found yet
       transaction['交易对方'] = '';
-      transaction['分类'] = mapCategory(record['交易类型'], record['商品'], record['交易对方']);
-      transaction['转账'] = mapAccount(record['交易对方']);
-      if (record['商品说明'].includes("还款")) {
+      transaction['分类'] = '';
+      transaction['账户'] = mapAccount(record['账户2']);
+      transaction['转账'] = mapAccount(record['账户1']);
+      transaction['金额'] = fee;
+    } else {
+      // 支出  收入 退款入账
+      transaction['交易对方'] = '';
+      transaction['分类'] = mapCategory(record['一级分类'], record['二级分类'], '');
+      transaction['转账'] = '';
+      if (record['类型'] == '支出') {
         transaction['金额'] = (-Math.abs(fee)).toString();
       } else {
         transaction['金额'] = fee;
       }
-    } else {
-      transaction['交易对方'] = '';
-      transaction['分类'] = mapCategory(record['交易类型'], record['商品'], record['交易对方']);
-      transaction['转账'] = '';
-      if (record['收/支'] == '支出') {
-        transaction['金额'] = (-Math.abs(fee)).toString();
-      } else if (record['收/支'] == '收入') {
-        transaction['金额'] = fee;
-      }
     }
-    transaction['标签'] = '';
+    transaction['标签'] = record['标签'];
     transaction['备注'] = '';
-
     transactions.push(transaction);
   });
 
   // output to file
   const output = stringify(transactions, {
     header: true,
-    columns: ['账户', '转账', '描述', '交易对方', '分类', '日期', '备注', '标签', '金额']
+    columns: ['账户', '转账', '描述', '交易对方', '分类', '日期', '时间', '备注', '标签', '金额']
   })
   const sourceDir = source.slice(0, source.lastIndexOf('/') + 1);
   await fsp.writeFile(`${sourceDir + getOutputName()}`, output);
@@ -137,15 +137,26 @@ async function mainProcess(source) {
 
 function parseDate(dateStr) {
   const dateObj = new Date(dateStr);
-  return dateObj.toLocaleString('zh-CN', {
-    hourCycle: "h24",
+  
+  // 获取日期部分
+  const datePart = dateObj.toLocaleString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
+    day: '2-digit'
+  }).replace(/\//g, '/'); // 确保使用斜杠分隔
+  
+  // 获取时间部分
+  const timePart = dateObj.toLocaleString('zh-CN', {
+    hourCycle: "h24",
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
-  });
+  }).replace(/上午|下午/g, '').trim(); // 移除可能出现的上午/下午
+  
+  return {
+    date: datePart,
+    time: timePart
+  };
 }
 
 function mapAccount(recordStr) {
@@ -170,14 +181,16 @@ function mapCategory(transactionType, product, counterparty) {
       }
     }
   }
-  
+  if (transactionType == '红包') {
+    return "其他";
+  }
   return transactionType || "其他";
 }
 
 function getOutputName() {
   const now = new Date();
   const date = now.getFullYear() + '_' + (now.getMonth() + 1).toString() + '_' + now.getDate();
-  return `【生成】微信账单_${date}.csv`;
+  return `【生成】icost账单_${date}.csv`;
 }
 
 // main().then(
