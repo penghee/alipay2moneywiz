@@ -137,15 +137,11 @@ async function mainProcess(source) {
 
 function parseDate(dateStr) {
   const dateObj = new Date(dateStr);
-  return dateObj.toLocaleString('zh-CN', {
-    hourCycle: "h24",
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  console.log(parseDate, `${year}/${month}/${day}`)
+  return `${year}/${month}/${day}`;
 }
 
 function mapAccount(recordStr) {

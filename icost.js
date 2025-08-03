@@ -117,6 +117,9 @@ async function mainProcess(source) {
         transaction['金额'] = (-Math.abs(fee)).toString();
       } else {
         transaction['金额'] = fee;
+        if (record['类型'] == '退款入账') {
+          transaction['描述'] = `${transaction['分类']} 的退款`
+        }
       }
     }
     transaction['标签'] = record['标签'];
@@ -138,24 +141,13 @@ async function mainProcess(source) {
 function parseDate(dateStr) {
   const dateObj = new Date(dateStr);
   
-  // 获取日期部分
-  const datePart = dateObj.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).replace(/\//g, '/'); // 确保使用斜杠分隔
-  
-  // 获取时间部分
-  const timePart = dateObj.toLocaleString('zh-CN', {
-    hourCycle: "h24",
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  }).replace(/上午|下午/g, '').trim(); // 移除可能出现的上午/下午
+  // 获取日期部分并格式化为 YYYY/MM/DD
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
   
   return {
-    date: datePart,
-    time: timePart
+    date: `${year}/${month}/${day}`
   };
 }
 
