@@ -7,18 +7,26 @@ import XLSX from 'xlsx';
 
 const ACCOUNT_MAP = JSON.parse(await fsp.readFile("account_map.json"));
 const CATEGORY_MAP = JSON.parse(await fsp.readFile("category_map.json"));
+const CATEGORIES = Object.keys(CATEGORY_MAP);
 
-function main() {
-  // request input file path
-  const query = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-  query.question('\n***微信账单转换***\n\n\n请输入原文件路径(支持csv和xlsx格式):\n\n', (answer) => {
-    const reg = /\\/g;
-    mainProcess(answer.trim().replace(reg, ''));
-    query.close();
-  })
+// 1. 在 mainProcess 顶部创建一次
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+// 2. 改写 interactiveCorrect 为接受 rl 的同步提问
+function askQuestion(query) {
+  return new Promise(resolve =>
+    rl.question(query, answer => resolve(answer.trim()))
+  );
+}
+
+
+async function main() {
+  const answer = await askQuestion('\n***微信账单转换***\n\n\n请输入原文件路径(支持csv和xlsx格式):\n\n')
+  const reg = /\\/g;
+  mainProcess(answer.trim().replace(reg, ''));
 }
 
 async function mainProcess(source) {
@@ -92,7 +100,7 @@ async function mainProcess(source) {
 
   // process all records
   const transactions = [];
-  records.forEach(record => {
+  for (const record of records) {
     let transaction = {};
     transaction['日期'] = parseDate(record['交易时间']);
     transaction['描述'] = record['商品'] == "/" ? record['交易类型'] : record['商品'];
@@ -121,8 +129,11 @@ async function mainProcess(source) {
     transaction['标签'] = '';
     transaction['备注'] = '';
 
+    if (transaction['分类'] === '其他') {
+      await interactiveCorrect(transaction);
+    }
     transactions.push(transaction);
-  });
+  }
 
   // output to file
   const output = stringify(transactions, {
@@ -132,6 +143,7 @@ async function mainProcess(source) {
   const sourceDir = source.slice(0, source.lastIndexOf('/') + 1);
   await fsp.writeFile(`${sourceDir + getOutputName()}`, output);
   console.log(`\n解析完成，输出路径: ${sourceDir + getOutputName()}`);
+  rl.close();
 }
 
 
@@ -140,7 +152,6 @@ function parseDate(dateStr) {
   const year = dateObj.getFullYear();
   const month = String(dateObj.getMonth() + 1).padStart(2, '0');
   const day = String(dateObj.getDate()).padStart(2, '0');
-  console.log(parseDate, `${year}/${month}/${day}`)
   return `${year}/${month}/${day}`;
 }
 
@@ -174,6 +185,21 @@ function getOutputName() {
   const now = new Date();
   const date = now.getFullYear() + '_' + (now.getMonth() + 1).toString() + '_' + now.getDate();
   return `【生成】微信账单_${date}.csv`;
+}
+
+async function interactiveCorrect(transaction) {
+  console.log(`\n🤔 未分类: "${transaction['描述']}" - ¥${Math.abs(transaction['金额'])}`);
+  CATEGORIES.forEach((cat, idx) => console.log(`${idx + 1}. ${cat}`));
+
+  const ans = await askQuestion('请选择正确分类（输入序号）: ');
+  const idx = parseInt(ans, 10) - 1;
+  if (idx >= 0 && idx < CATEGORIES.length) {
+    transaction['分类'] = CATEGORIES[idx];
+    console.log(`✅ 已更新为：${CATEGORIES[idx]}`);
+  } else {
+    console.log('⚠️ 保持为“其他”');
+  }
+  return transaction;
 }
 
 // main().then(
