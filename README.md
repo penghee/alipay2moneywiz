@@ -1,5 +1,5 @@
 # Alipay2Moneywiz
-将支付宝&微信个人账单转换为MoneyWiz兼容的csv文件（中文格式）
+将支付宝&微信&京东个人账单转换为MoneyWiz兼容的csv文件（中文格式）
 ## Installation
 node版本 >= `v14.16.1` (`lts/fermium`)
 ```shell
@@ -55,4 +55,10 @@ $ npm run alipay
 ```shell
 $ npm run wechat
 ```
-运行脚本后，根据提示，直接将下载解压后的支付宝（微信）账单.csv文件，拖入Terminal窗口即可。
+```shell
+$ npm run jd
+```
+```shell
+$ npm run icost
+```
+运行脚本后，根据提示，直接将下载解压后的支付宝（微信 / 京东）账单.csv文件，拖入Terminal窗口即可。
