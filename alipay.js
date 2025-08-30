@@ -7,6 +7,7 @@ import * as readline from 'node:readline'
 
 const ACCOUNT_MAP = JSON.parse(await fsp.readFile("account_map.json"));
 const CATEGORY_MAP = JSON.parse(await fsp.readFile("category_map.json"));
+const CATEGORIES = Object.keys(CATEGORY_MAP);
 
 // 1. 在 mainProcess 顶部创建一次
 const rl = readline.createInterface({
@@ -23,9 +24,16 @@ function askQuestion(query) {
 
 
 async function main() {
-  const answer = await askQuestion('\n***支付宝账单转换***\n\n\n请输入原文件路径(支持csv和xlsx格式):\n\n')
-  const reg = /\\/g;
-  mainProcess(answer.trim().replace(reg, ''));
+  try {
+    const answer = await askQuestion('\n***支付宝账单转换***\n\n\n请输入原文件路径(支持csv和xlsx格式):\n\n')
+    const reg = /\\/g;
+    await mainProcess(answer.trim().replace(reg, ''));
+  } catch (err) {
+    console.error('处理过程中出错:', err);
+  } finally {
+    rl.close();
+    process.exit(0); // 确保程序退出
+  }
 }
 
 async function mainProcess(source) {
@@ -66,7 +74,7 @@ async function mainProcess(source) {
   const transactions = [];
   for(const record of records) {
     if (record['交易状态'] == '交易关闭') {
-      return;
+      continue;
     }
     let transaction = {};
     transaction['日期'] = parseDate(record['交易时间']);
@@ -109,7 +117,6 @@ async function mainProcess(source) {
   const sourceDir = source.slice(0, source.lastIndexOf('/') + 1);
   await fsp.writeFile(`${sourceDir + getOutputName()}`, output);
   console.log(`\n解析完成，输出路径: ${sourceDir + getOutputName()}`);
-  rl.close();
 }
 
 

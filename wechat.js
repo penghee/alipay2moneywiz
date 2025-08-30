@@ -24,9 +24,16 @@ function askQuestion(query) {
 
 
 async function main() {
-  const answer = await askQuestion('\n***微信账单转换***\n\n\n请输入原文件路径(支持csv和xlsx格式):\n\n')
-  const reg = /\\/g;
-  mainProcess(answer.trim().replace(reg, ''));
+  try {
+    const answer = await askQuestion('\n***微信账单转换***\n\n\n请输入原文件路径(支持csv和xlsx格式):\n\n')
+    const reg = /\\/g;
+    mainProcess(answer.trim().replace(reg, ''));
+  } catch (err) {
+    console.error('处理过程中出错:', err);
+  } finally {
+    rl.close();
+    process.exit(0); // 确保程序退出
+  }
 }
 
 async function mainProcess(source) {
@@ -143,7 +150,6 @@ async function mainProcess(source) {
   const sourceDir = source.slice(0, source.lastIndexOf('/') + 1);
   await fsp.writeFile(`${sourceDir + getOutputName()}`, output);
   console.log(`\n解析完成，输出路径: ${sourceDir + getOutputName()}`);
-  rl.close();
 }
 
 
