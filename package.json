@@ -10,6 +10,8 @@
     "wechat": "node wechat.js",
     "icost": "node icost.js",
     "jd": "node jd.js",
+    "import": "node src/import.js",
+    "preview": "node src/preview.js",
     "build": "tsup",
     "pack:alipay": "cd dist && pkg alipay.cjs --targets node16-macos-x64 && cp alipay ../bin",
     "pack:wechat": "cd dist && pkg wechat.cjs --targets node16-macos-x64 && cp wechat ../bin"
