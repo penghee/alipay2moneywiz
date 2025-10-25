@@ -61,7 +61,7 @@ export function readCSV(filePath: string): Transaction[] {
 
 // 计算月度统计
 export function calculateMonthlyStats(year: number, month: number): MonthlyStats {
-  const dataDir = path.join(process.cwd(), "..", "data", year.toString());
+  const dataDir = path.join(process.cwd(), "..", "money-data", year.toString());
   const filePath = path.join(dataDir, `${String(month).padStart(2, "0")}.csv`);
 
   if (!existsSync(filePath)) {
@@ -105,7 +105,7 @@ export function calculateMonthlyStats(year: number, month: number): MonthlyStats
 
 // 计算年度统计
 export function calculateYearlyStats(year: number): YearlyStats {
-  const dataDir = path.join(process.cwd(), "..", "data", year.toString());
+  const dataDir = path.join(process.cwd(), "..", "money-data", year.toString());
 
   if (!existsSync(dataDir)) {
     throw new Error(`数据目录不存在: ${dataDir}`);
@@ -179,9 +179,9 @@ export function calculateYearlyStats(year: number): YearlyStats {
 export function getAvailableYears(): number[] {
   // 尝试多个可能的路径
   const possiblePaths = [
-    path.join(process.cwd(), "..", "data"),
-    path.join(process.cwd(), "data"),
-    path.join(process.cwd(), "..", "..", "data"),
+    path.join(process.cwd(), "..", "money-data"),
+    path.join(process.cwd(), "money-data"),
+    path.join(process.cwd(), "..", "..", "money-data"),
   ];
   
   let dataDir = '';
@@ -222,7 +222,7 @@ export function getAvailableYears(): number[] {
 
 // 获取指定年份的可用月份
 export function getAvailableMonths(year: number): number[] {
-  const dataDir = path.join(process.cwd(), "..", "data", year.toString());
+  const dataDir = path.join(process.cwd(), "..", "money-data", year.toString());
   
   try {
     if (!existsSync(dataDir)) {
