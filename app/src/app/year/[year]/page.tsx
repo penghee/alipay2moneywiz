@@ -135,7 +135,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">总收入</p>
+                <p className="text-sm font-medium text-gray-600">总退款</p>
                 <p className="text-2xl font-bold text-green-600">
                   ¥{formatMoney(stats.totalIncome)}
                 </p>
@@ -159,7 +159,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">结余</p>
+                <p className="text-sm font-medium text-gray-600">净支出</p>
                 <p className={`text-2xl font-bold ${stats.totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   ¥{formatMoney(stats.totalBalance)}
                 </p>
@@ -185,7 +185,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
                 <Tooltip 
                   formatter={(value: number, name: string) => [
                     `¥${formatMoney(value)}`, 
-                    name === 'income' ? '收入' : name === 'expense' ? '支出' : '结余'
+                    name === 'income' ? '退款' : name === 'expense' ? '支出' : '净支出'
                   ]}
                 />
                 <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} />
@@ -209,7 +209,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
                 <Tooltip 
                   formatter={(value: number, name: string) => [
                     `¥${formatMoney(value)}`, 
-                    name === 'income' ? '收入' : '支出'
+                    name === 'income' ? '退款' : '支出'
                   ]}
                 />
                 <Bar dataKey="income" fill="#10b981" />
