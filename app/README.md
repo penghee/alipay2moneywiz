@@ -40,7 +40,7 @@ app/
 
 ## 数据格式
 
-应用读取 `../data/` 目录下的 CSV 文件，支持以下格式：
+应用读取 `../money-data/` 目录下的 CSV 文件（可通过环境变量自定义路径），支持以下格式：
 
 ```csv
 账户,转账,描述,交易对方,分类,日期,备注,标签,金额
@@ -54,12 +54,28 @@ app/
 npm install
 ```
 
-2. 启动开发服务器：
+2. 配置数据目录（可选）：
+
+创建 `.env.local` 文件配置数据目录路径：
+
+```bash
+# 使用绝对路径（推荐）
+MONEY_DATA_PATH=/Users/yourname/Documents/money-data
+
+# 或使用相对路径
+MONEY_DATA_DIR=money-data
+```
+
+如果不配置，默认使用 `../money-data` 目录。
+
+详细配置说明请查看 [ENV.md](./ENV.md)
+
+3. 启动开发服务器：
 ```bash
 npm run dev
 ```
 
-3. 访问应用：
+4. 访问应用：
 打开浏览器访问 [http://localhost:3000](http://localhost:3000)
 
 ## API 接口
@@ -94,15 +110,19 @@ GET /api/stats/monthly/[year]/[month]
 
 ### 数据目录结构
 ```
-data/
+money-data/
 ├── 2025/
 │   ├── 01.csv
 │   ├── 02.csv
+│   ├── 01_alipay.csv  (可选，原始数据)
+│   ├── 01_wechat.csv  (可选，原始数据)
 │   └── ...
 └── 2024/
     ├── 01.csv
     └── ...
 ```
+
+**注意**: 数据目录路径可通过环境变量 `MONEY_DATA_PATH` 或 `MONEY_DATA_DIR` 自定义。
 
 ### 数据处理
 - 支持正数（收入）和负数（支出）
@@ -127,10 +147,11 @@ npm start
 
 ## 注意事项
 
-1. 确保 `data` 目录中有有效的 CSV 文件
-2. CSV 文件需要包含正确的列名
-3. 金额字段应为数字格式
-4. 日期格式建议使用 YYYY-MM-DD
+1. 确保数据目录（默认 `money-data`）中有有效的 CSV 文件
+2. 可通过 `.env.local` 文件自定义数据目录路径
+3. CSV 文件需要包含正确的列名
+4. 金额字段应为数字格式
+5. 日期格式建议使用 YYYY-MM-DD
 
 ## 贡献
 

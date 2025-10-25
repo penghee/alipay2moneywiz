@@ -1,6 +1,7 @@
 import { parse } from 'csv-parse/sync';
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import path from 'path';
+import { getDataDirectory, getYearDataDirectory } from '@/config/paths';
 
 export interface Transaction {
   账户: string;
@@ -61,7 +62,7 @@ export function readCSV(filePath: string): Transaction[] {
 
 // 计算月度统计
 export function calculateMonthlyStats(year: number, month: number): MonthlyStats {
-  const dataDir = path.join(process.cwd(), "..", "money-data", year.toString());
+  const dataDir = getYearDataDirectory(year);
   const filePath = path.join(dataDir, `${String(month).padStart(2, "0")}.csv`);
 
   if (!existsSync(filePath)) {
@@ -105,7 +106,7 @@ export function calculateMonthlyStats(year: number, month: number): MonthlyStats
 
 // 计算年度统计
 export function calculateYearlyStats(year: number): YearlyStats {
-  const dataDir = path.join(process.cwd(), "..", "money-data", year.toString());
+  const dataDir = getYearDataDirectory(year);
 
   if (!existsSync(dataDir)) {
     throw new Error(`数据目录不存在: ${dataDir}`);
@@ -177,28 +178,14 @@ export function calculateYearlyStats(year: number): YearlyStats {
 
 // 获取可用的年份列表
 export function getAvailableYears(): number[] {
-  // 尝试多个可能的路径
-  const possiblePaths = [
-    path.join(process.cwd(), "..", "money-data"),
-    path.join(process.cwd(), "money-data"),
-    path.join(process.cwd(), "..", "..", "money-data"),
-  ];
-  
-  let dataDir = '';
-  for (const testPath of possiblePaths) {
-    if (existsSync(testPath)) {
-      dataDir = testPath;
-      break;
-    }
-  }
+  const dataDir = getDataDirectory();
   
   try {
     console.log('Current working directory:', process.cwd());
-    console.log('Looking for data directory in:', possiblePaths);
-    console.log('Found data directory:', dataDir);
+    console.log('Data directory:', dataDir);
     
-    if (!dataDir) {
-      console.log('No data directory found in any of the possible paths');
+    if (!existsSync(dataDir)) {
+      console.log('Data directory does not exist:', dataDir);
       return [];
     }
 
@@ -222,7 +209,7 @@ export function getAvailableYears(): number[] {
 
 // 获取指定年份的可用月份
 export function getAvailableMonths(year: number): number[] {
-  const dataDir = path.join(process.cwd(), "..", "money-data", year.toString());
+  const dataDir = getYearDataDirectory(year);
   
   try {
     if (!existsSync(dataDir)) {
