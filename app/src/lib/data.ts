@@ -31,6 +31,7 @@ export interface YearlyStats {
   totalIncome: number;
   totalExpense: number;
   totalBalance: number;
+  categoryStats: Record<string, CategoryStats>;
   monthlyData: Array<{
     month: number;
     income: number;
@@ -117,6 +118,7 @@ export function calculateYearlyStats(year: number): YearlyStats {
 
   let totalIncome = 0;
   let totalExpense = 0;
+  const categoryStats: Record<string, CategoryStats> = {};
   const monthlyData: Array<{
     month: number;
     income: number;
@@ -134,10 +136,22 @@ export function calculateYearlyStats(year: number): YearlyStats {
 
     transactions.forEach(t => {
       const amount = parseFloat(t["金额"]);
+      const category = t["分类"];
+
       if (amount > 0) {
         monthIncome += amount;
       } else {
         monthExpense += Math.abs(amount);
+        
+        // 聚合分类统计
+        if (!categoryStats[category]) {
+          categoryStats[category] = {
+            amount: 0,
+            count: 0
+          };
+        }
+        categoryStats[category].amount += Math.abs(amount);
+        categoryStats[category].count += 1;
       }
     });
 
@@ -156,6 +170,7 @@ export function calculateYearlyStats(year: number): YearlyStats {
     totalIncome,
     totalExpense,
     totalBalance: totalIncome - totalExpense,
+    categoryStats,
     monthlyData
   };
 }
