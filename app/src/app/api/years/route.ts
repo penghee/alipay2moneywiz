@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAvailableYears } from '@/lib/data';
 
+export const dynamic = 'force-dynamic'; // Prevent static generation
+
 export async function GET() {
   try {
     console.log('Current working directory:', process.cwd());

@@ -6,6 +6,7 @@ import path from 'path';
 import * as XLSX from 'xlsx';
 import iconv from 'iconv-lite';
 import { DATA_PATHS } from '@/config/paths';
+export const dynamic = 'force-dynamic'; // Prevent static generation
 
 // 读取映射文件
 function loadMaps() {
@@ -230,7 +231,7 @@ function saveData(transactions: Record<string, string>[], year: number, month: n
     }
   } catch (error) {
     // 文件不存在或其他错误，继续使用空数组
-    if (error.code !== 'ENOENT') {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       console.error('Error reading existing data:', error);
     }
   }

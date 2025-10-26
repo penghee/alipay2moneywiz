@@ -242,6 +242,7 @@ export default function BudgetPage({ params }: { params: Promise<{ year: string 
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
+                        // @ts-ignore text label
                         label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(1)}%`}
                       >
                         {Object.entries(budgetProgress.categories || {})

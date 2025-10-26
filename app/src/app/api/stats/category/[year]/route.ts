@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { calculateCategoryYearlyStats } from '@/lib/data';
 
+export const dynamic = 'force-dynamic'; // Prevent static generation
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ year: string }> }

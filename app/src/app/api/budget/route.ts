@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getYearlyBudget, setYearlyBudget } from '@/lib/budget';
 
+export const dynamic = 'force-dynamic'; // Prevent static generation
+
 type RequestBody = {
   year: string | number;
   total?: number;

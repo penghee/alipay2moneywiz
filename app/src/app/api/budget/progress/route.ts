@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getBudgetProgress as getBudgetProgressFromDB } from '@/lib/budget';
+export const dynamic = 'force-dynamic'; // Ensure this route is server-side rendered
 
 export async function GET(request: Request) {
   try {
@@ -35,4 +36,3 @@ export async function GET(request: Request) {
   }
 }
 
-export const dynamic = 'force-dynamic'; // Ensure this route is server-side rendered
