@@ -41,6 +41,19 @@ export interface YearlyStats {
   }>;
 }
 
+export interface CategoryMonthlyData {
+  month: number;
+  amount: number;
+  count: number;
+}
+
+export interface CategoryYearlyStats {
+  categories: string[];
+  monthlyData: Record<string, CategoryMonthlyData[]>;
+  totalByCategory: Record<string, CategoryStats>;
+  totalExpense: number;
+}
+
 // 格式化金额
 export function formatMoney(amount: number): string {
   return new Intl.NumberFormat('zh-CN', {
@@ -227,4 +240,78 @@ export function getAvailableMonths(year: number): number[] {
     console.error('Error reading months directory:', error);
     return [];
   }
+}
+
+// 计算分类年度统计（按月聚合）
+export function calculateCategoryYearlyStats(year: number): CategoryYearlyStats {
+  const dataDir = getYearDataDirectory(year);
+
+  if (!existsSync(dataDir)) {
+    throw new Error(`数据目录不存在: ${dataDir}`);
+  }
+
+  const files = readdirSync(dataDir);
+  const csvFiles = files.filter(f => {
+    return !(f.includes("alipay") || f.includes("wechat"))
+  }).filter(f => f.endsWith('.csv')).sort();
+
+  const monthlyData: Record<string, CategoryMonthlyData[]> = {};
+  const totalByCategory: Record<string, CategoryStats> = {};
+  let totalExpense = 0;
+  const categoriesSet = new Set<string>();
+
+  for (const file of csvFiles) {
+    const month = parseInt(file.replace('.csv', ''));
+    const filePath = path.join(dataDir, file);
+    const transactions = readCSV(filePath);
+
+    transactions.forEach(t => {
+      const amount = parseFloat(t["金额"]);
+      const category = t["分类"];
+
+      // 只统计支出
+      if (amount < 0) {
+        const absAmount = Math.abs(amount);
+        totalExpense += absAmount;
+        categoriesSet.add(category);
+
+        // 初始化分类的月度数据数组
+        if (!monthlyData[category]) {
+          monthlyData[category] = [];
+        }
+
+        // 查找或创建该月的数据
+        let monthData = monthlyData[category].find(m => m.month === month);
+        if (!monthData) {
+          monthData = { month, amount: 0, count: 0 };
+          monthlyData[category].push(monthData);
+        }
+        monthData.amount += absAmount;
+        monthData.count += 1;
+
+        // 更新总计
+        if (!totalByCategory[category]) {
+          totalByCategory[category] = { amount: 0, count: 0 };
+        }
+        totalByCategory[category].amount += absAmount;
+        totalByCategory[category].count += 1;
+      }
+    });
+  }
+
+  // 对每个分类的月度数据按月份排序
+  Object.keys(monthlyData).forEach(category => {
+    monthlyData[category].sort((a, b) => a.month - b.month);
+  });
+
+  const categories = Array.from(categoriesSet).sort((a, b) => {
+    return totalByCategory[b].amount - totalByCategory[a].amount;
+  });
+
+  return {
+    categories,
+    monthlyData,
+    totalByCategory,
+    totalExpense
+  };
 }

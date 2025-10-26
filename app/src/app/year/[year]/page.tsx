@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, TrendingUp, DollarSign, BarChart3, PieChart } from 'lucide-react';
+import { ArrowLeft, Calendar, TrendingUp, DollarSign, BarChart3, PieChart, Wallet } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 
 interface CategoryStats {
@@ -32,6 +32,8 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
   const [months, setMonths] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState<number | null>(null);
+  const [budgetUsed, setBudgetUsed] = useState<number>(0);
+  const [totalBudget, setTotalBudget] = useState<number>(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -49,10 +51,17 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
         
         setYear(yearNum);
         
-        const [statsRes, monthsRes] = await Promise.all([
+        const [statsRes, monthsRes, budgetRes] = await Promise.all([
           fetch(`/api/stats/yearly/${yearNum}`),
-          fetch(`/api/years/${yearNum}/months`)
+          fetch(`/api/years/${yearNum}/months`),
+          fetch(`/api/budget/progress?year=${yearNum}`).then(res => res.ok ? res.json() : { total: { budget: 0, spent: 0 } })
         ]);
+
+        // 设置预算数据
+        if (budgetRes && budgetRes.total) {
+          setTotalBudget(budgetRes.total.budget);
+          setBudgetUsed(budgetRes.total.spent);
+        }
 
         if (statsRes.ok) {
           const statsData = await statsRes.json();
@@ -152,7 +161,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -186,6 +195,36 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
                 </p>
               </div>
               <DollarSign className="h-8 w-8 text-blue-600" />
+            </div>
+          </div>
+
+          {/* 预算概览 */}
+          <div 
+            className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => router.push(`/year/${year}/budget`)}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center">
+                  <p className="text-sm font-medium text-gray-600">年度预算</p>
+                  <span className="ml-2 text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">
+                    {totalBudget > 0 ? `${((budgetUsed / totalBudget) * 100).toFixed(2)}%` : '0.00%'}
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-blue-600">
+                  ¥{formatMoney(totalBudget)}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  已用: ¥{formatMoney(budgetUsed)}
+                </p>
+              </div>
+              <Wallet className="h-8 w-8 text-blue-600" />
+            </div>
+            <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full" 
+                style={{ width: `${totalBudget > 0 ? Math.min(100, (budgetUsed / totalBudget) * 100) : 0}%` }}
+              ></div>
             </div>
           </div>
         </div>
@@ -251,10 +290,18 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
 
         {/* Category Details Table */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <BarChart3 className="h-5 w-5 mr-2" />
-            年度分类明细
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <BarChart3 className="h-5 w-5 mr-2" />
+              年度分类明细
+            </h3>
+            <button
+              onClick={() => router.push(`/year/${year}/category`)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              查看分类趋势分析 →
+            </button>
+          </div>
           
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
