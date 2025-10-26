@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, TrendingUp, DollarSign, Upload } from 'lucide-react';
+import { Calendar, TrendingUp, DollarSign, Upload, List } from 'lucide-react';
 
 interface YearData {
   years: number[];
@@ -54,13 +54,22 @@ export default function Home() {
             查看您的年度和月度财务统计
           </p>
           
-          <button
-            onClick={() => router.push('/import')}
-            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Upload className="h-5 w-5 mr-2" />
-            导入账单文件
-          </button>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <button
+              onClick={() => router.push('/import')}
+              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Upload className="h-5 w-5 mr-2" />
+              导入账单文件
+            </button>
+            <button
+              onClick={() => router.push('/category-management')}
+              className="inline-flex items-center px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <List className="h-5 w-5 mr-2" />
+              分类管理
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

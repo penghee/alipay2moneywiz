@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from 'fs';
-import path from 'path';
+import { DATA_PATHS } from '@/config/paths';
 
 export interface BudgetConfig {
   [year: string]: {
@@ -9,12 +9,11 @@ export interface BudgetConfig {
     };
   };
 }
-
-const BUDGET_CONFIG_PATH = path.join(process.cwd(), 'src/config/budget_config.json');
+DATA_PATHS.ensureBudgetConfigExists()
 
 export async function getBudgetConfig(): Promise<BudgetConfig> {
   try {
-    const data = await readFileSync(BUDGET_CONFIG_PATH, 'utf-8');
+    const data = readFileSync(DATA_PATHS.maps.budget(), 'utf-8');
     return JSON.parse(data);
   } catch (error) {
     console.error('Error reading budget config:', error);
@@ -26,7 +25,7 @@ export async function updateBudgetConfig(updater: (config: BudgetConfig) => Budg
   try {
     const currentConfig = await getBudgetConfig();
     const updatedConfig = updater(currentConfig);
-    await writeFileSync(BUDGET_CONFIG_PATH, JSON.stringify(updatedConfig, null, 2), 'utf-8');
+    writeFileSync(DATA_PATHS.maps.budget(), JSON.stringify(updatedConfig, null, 2), 'utf-8');
   } catch (error) {
     console.error('Error updating budget config:', error);
     throw error;
@@ -36,7 +35,6 @@ export async function updateBudgetConfig(updater: (config: BudgetConfig) => Budg
 export async function getYearlyBudget(year: number | string): Promise<{ total: number; categories: Record<string, number> }> {
   const config = await getBudgetConfig();
   const yearStr = year.toString();
-  
   return config[yearStr] || { total: 0, categories: {} };
 }
 

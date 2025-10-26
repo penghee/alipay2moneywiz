@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parse } from 'csv-parse/sync';
 import { stringify } from 'csv-stringify/sync';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import * as XLSX from 'xlsx';
 import iconv from 'iconv-lite';
+import { DATA_PATHS } from '@/config/paths';
 
 // 读取映射文件
 function loadMaps() {
-  const accountMapPath = path.join(process.cwd(), '..', 'account_map.json');
-  const categoryMapPath = path.join(process.cwd(), '..', 'category_map.json');
-  
-  const accountMap = JSON.parse(readFileSync(accountMapPath, 'utf8'));
-  const categoryMap = JSON.parse(readFileSync(categoryMapPath, 'utf8'));
+  const accountMap = JSON.parse(readFileSync(DATA_PATHS.maps.account(), 'utf8'));
+  const categoryMap = JSON.parse(readFileSync(DATA_PATHS.maps.category(), 'utf8'));
   
   return { accountMap, categoryMap };
 }
@@ -212,42 +210,71 @@ function processWechat(content: Buffer, accountMap: Record<string, string>, cate
 
 // 保存数据
 function saveData(transactions: Record<string, string>[], year: number, month: number, platform: string) {
-  const dataDir = path.join(process.cwd(), '..', 'data', year.toString());
-  if (!existsSync(dataDir)) {
-    mkdirSync(dataDir, { recursive: true });
+  // 确保年份目录存在
+  const yearDir = DATA_PATHS.ensureYearDirectory(year);
+  
+  // 构建文件路径
+  const monthStr = month.toString().padStart(2, '0');
+  const filename = `${year}${monthStr}_${platform}.csv`;
+  const filepath = path.join(yearDir, filename);
+
+  // 检查文件是否存在并读取现有数据
+  let existingData: Record<string, string>[] = [];
+  try {
+    const content = readFileSync(filepath, 'utf8');
+    if (content.trim()) {
+      existingData = parse(content, {
+        columns: true,
+        skip_empty_lines: true,
+      }) as Record<string, string>[];
+    }
+  } catch (error) {
+    // 文件不存在或其他错误，继续使用空数组
+    if (error.code !== 'ENOENT') {
+      console.error('Error reading existing data:', error);
+    }
   }
 
-  const outputPath = path.join(dataDir, `${String(month).padStart(2, '0')}_${platform}.csv`);
-  
-  const output = stringify(transactions, {
+  // 合并现有数据和新数据
+  const allData = [...existingData, ...transactions];
+
+  // 保存数据
+  const output = stringify(allData, {
     header: true,
     columns: ['账户', '转账', '描述', '交易对方', '分类', '日期', '备注', '标签', '金额'],
   });
+  writeFileSync(filepath, output);
 
-  writeFileSync(outputPath, output);
-
-  // 合并到月份文件
-  const monthPath = path.join(dataDir, `${String(month).padStart(2, '0')}.csv`);
-  if (!existsSync(monthPath)) {
-    writeFileSync(monthPath, output);
-  } else {
+    // 合并到月份文件
+  const monthPath = path.join(yearDir, `${monthStr}.csv`);
+  try {
     const monthContent = readFileSync(monthPath, 'utf8');
     const monthTransactions = parse(monthContent, {
       delimiter: ',',
       columns: true,
       trim: true,
       relax_column_count: true,
-      skip_empty_lines: true,
-    });
-    monthTransactions.push(...transactions);
-    const monthOutput = stringify(monthTransactions, {
+    }) as Record<string, string>[];
+    
+    const mergedData = [...monthTransactions, ...transactions];
+    const mergedOutput = stringify(mergedData, {
       header: true,
       columns: ['账户', '转账', '描述', '交易对方', '分类', '日期', '备注', '标签', '金额'],
     });
-    writeFileSync(monthPath, monthOutput);
+    writeFileSync(monthPath, mergedOutput);
+  } catch (error) {
+    // 如果文件不存在，创建新文件
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      writeFileSync(monthPath, stringify(transactions, {
+        header: true,
+        columns: ['账户', '转账', '描述', '交易对方', '分类', '日期', '备注', '标签', '金额'],
+      }));
+    } else {
+      console.error('Error processing month file:', error);
+    }
   }
-
-  return outputPath;
+  
+  return { filepath, count: transactions.length };
 }
 
 export async function POST(request: NextRequest) {
