@@ -2,8 +2,91 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, Info } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, PieLabelRenderProps } from 'recharts';
+
+// 颜色池 - 使用 Tailwind CSS 的调色板
+const COLOR_PALETTE = [
+  // 蓝色系
+  '#3b82f6', // blue-500
+  // 绿色系
+  '#10b981', // emerald-500
+  // 紫色系
+  '#8b5cf6', // violet-500
+  // 红色系
+  '#ef4444', // red-500
+  // 黄色系
+  '#f59e0b', // amber-500
+  // 青色系
+  '#06b6d4', // cyan-500
+  // 粉红色系
+  '#ec4899', // pink-500  
+  // 橙色系
+  '#f97316', // orange-500
+
+  '#60a5fa', // blue-400
+  '#34d399', // emerald-400
+  '#a78bfa', // violet-400
+  '#f87171', // red-400
+  '#fbbf24', // amber-400
+  '#22d3ee', // cyan-400
+  '#f472b6', // pink-400
+  '#fb923c', // orange-400
+
+  '#93c5fd', // blue-300
+  '#6ee7b7', // emerald-300
+  '#c4b5fd', // violet-300
+  '#fca5a5', // red-300
+  '#fbbf24', // amber-300
+  '#fcd34d', // amber-200
+  '#67e8f9', // cyan-300
+  '#f9a8d4', // pink-300
+  '#fdba74', // orange-300
+
+    // 灰色系
+  '#94a3b8', // slate-400
+  '#cbd5e1', // slate-300
+  '#e2e8f0', // slate-200
+];
+
+// 存储已分配的颜色
+const assignedColors: Record<string, string> = {};
+let colorIndex = 0;
+
+// 获取分类颜色
+const getCategoryColor = (category: string): string => {
+  // 如果已经有颜色，直接返回
+  if (assignedColors[category]) {
+    return assignedColors[category];
+  }
+  
+  // 从颜色池中获取颜色
+  const color = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
+  assignedColors[category] = color;
+  colorIndex++;
+  
+  return color;
+};
 import { fetchYearlyBudget, updateYearlyBudget, fetchBudgetProgress } from '@/lib/api/budget';
+
+interface BudgetProgressCategory {
+  budget: number;
+  spent: number;
+  remaining: number;
+  percentage: number;
+  overBudget: boolean;
+}
+
+interface BudgetProgressData {
+  total: {
+    budget: number;
+    spent: number;
+    remaining: number;
+    percentage: number;
+    overBudget: boolean;
+  };
+  categories: Record<string, BudgetProgressCategory>;
+}
 
 export default function BudgetPage({ params }: { params: Promise<{ year: string }> }) {
   const [year, setYear] = useState<number | null>(null);
@@ -12,7 +95,7 @@ export default function BudgetPage({ params }: { params: Promise<{ year: string 
   const [newCategory, setNewCategory] = useState('');
   const [newAmount, setNewAmount] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [budgetProgress, setBudgetProgress] = useState<any>(null);
+  const [budgetProgress, setBudgetProgress] = useState<BudgetProgressData | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -138,16 +221,141 @@ export default function BudgetPage({ params }: { params: Promise<{ year: string 
           </div>
           
           {budgetProgress?.total && (
-            <div className="mt-4">
-              <div className="w-full bg-gray-200 rounded-full h-4">
-                <div
-                  className={`h-4 rounded-full ${budgetProgress.total.overBudget ? 'bg-red-500' : 'bg-green-500'}`}
-                  style={{ width: `${Math.min(100, budgetProgress.total.percentage)}%` }}
-                ></div>
+            <div className="mt-4 space-y-6">
+              {/* 饼图 */}
+              <div className="bg-white rounded-lg shadow-md p-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">预算分布</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={Object.entries(budgetProgress.categories || {})
+                          .filter(([_, data]) => data && data.budget > 0)
+                          .map(([name, data]) => ({
+                            name,
+                            value: data.budget,
+                            color: getCategoryColor(name)
+                          }))}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(1)}%`}
+                      >
+                        {Object.entries(budgetProgress.categories || {})
+                          .filter(([_, data]) => data && data.budget > 0)
+                          .map(([name]) => (
+                            <Cell key={`cell-${name}`} fill={getCategoryColor(name)} />
+                          ))}
+                      </Pie>
+                      <RechartsTooltip 
+                        formatter={(value: number, name: string) => [
+                          `¥${value.toLocaleString()}`,
+                          name
+                        ]}
+                      />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-              <div className="flex justify-between mt-1 text-sm text-gray-600">
-                <span>¥0</span>
-                <span>¥{totalBudget.toLocaleString()}</span>
+              
+              {/* 进度条 */}
+              <div className="bg-white rounded-lg shadow-md p-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">预算使用情况</h3>
+                <div className="w-full bg-gray-100 rounded-full h-6 overflow-hidden relative">
+                {(() => {
+                  // 先过滤出有消费的分类并计算宽度
+                  const categories = Object.entries(budgetProgress.categories || {})
+                    .filter(([_, data]) => data && data.spent > 0)
+                    .map(([category, data]) => {
+                      const width = Math.min(100, (data.spent / budgetProgress.total.budget) * 100);
+                      const percentage = (data.spent / budgetProgress.total.budget * 100).toFixed(2);
+                      return { category, data, width, percentage };
+                    });
+                  
+                  // 计算每个分类的偏移量
+                  let offset = 0;
+                  const segments = categories.map(({ category, data, width, percentage }) => {
+                    const segment = (
+                      <div 
+                        key={category}
+                        className="h-full absolute top-0 transition-all duration-300 hover:opacity-90 flex items-center justify-end pr-2 text-xs font-medium text-white"
+                        style={{
+                          left: `${offset}%`,
+                          width: `${width}%`,
+                          backgroundColor: getCategoryColor(category),
+                          backgroundImage: `linear-gradient(to right, ${getCategoryColor(category)}, ${getCategoryColor(category)}80)`,
+                          zIndex: 1
+                        }}
+                        title={`${category}: ¥${data.spent.toLocaleString()} (${percentage}%)`}
+                      >
+                        {width > 15 && (
+                          <span className="truncate">
+                            {category} {percentage}%
+                          </span>
+                        )}
+                      </div>
+                    );
+                    
+                    // 更新下一个分段的偏移量
+                    offset += width;
+                    
+                    return segment;
+                  });
+                  
+                  return segments;
+                })()}
+                {/* 显示未使用的预算 */}
+                {budgetProgress.total.remaining > 0 && (
+                  <div 
+                    className="h-full absolute top-0 right-0 bg-gray-200 flex items-center justify-end pr-2 text-xs text-gray-500"
+                    style={{
+                      width: `${Math.max(0, 100 - budgetProgress.total.percentage)}%`,
+                      transition: 'width 0.3s ease-in-out',
+                      zIndex: 0
+                    }}
+                  >
+                    {budgetProgress.total.percentage < 85 && (
+                      <span>剩余 ¥{budgetProgress.total.remaining.toLocaleString()}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+              
+              {/* 图例 */}
+              <div className="flex flex-wrap gap-4 mt-3 text-sm">
+                {Object.entries(budgetProgress.categories || {})
+                  .filter(([_, data]) => data && data.spent > 0)
+                  .map(([category, data]) => (
+                    <div key={category} className="flex items-center">
+                      <span 
+                        className="w-3 h-3 rounded-sm mr-2"
+                        style={{ 
+                          backgroundColor: getCategoryColor(category),
+                          minWidth: '12px'
+                        }}
+                      />
+                      <span className="text-gray-700 font-medium">{category}</span>
+                      <span className="text-gray-500 ml-1">
+                        (¥{data.spent.toLocaleString()}, {data.percentage.toFixed(2)}%)
+                      </span>
+                    </div>
+                  ))
+                }
+              </div>
+              
+              <div className="flex justify-between mt-3 text-sm text-gray-600 border-t border-gray-100 pt-2">
+                <div className="flex items-center">
+                  <span className="font-medium">总预算: ¥{totalBudget.toLocaleString()}</span>
+                  <Info className="w-3.5 h-3.5 ml-1 text-gray-400" />
+                </div>
+                <span className={budgetProgress.total.overBudget ? 'text-red-600 font-medium' : 'text-green-600 font-medium'}>
+                  已用: ¥{budgetProgress.total.spent.toLocaleString()} ({budgetProgress.total.percentage.toFixed(2)}%)
+                </span>
               </div>
             </div>
           )}
