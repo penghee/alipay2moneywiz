@@ -14,5 +14,5 @@ if [ ! -d "../data" ]; then
     echo ""
 fi
 
-# 启动服务器
-npm run start
+# 启动开发服务器
+npm run dev
