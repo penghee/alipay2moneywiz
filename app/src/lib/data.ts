@@ -24,8 +24,17 @@ export interface MonthlyStats {
   income: number;
   expense: number;
   balance: number;
+  expenses: Expense[];
   categoryStats: Record<string, CategoryStats>;
   totalTransactions: number;
+}
+
+export interface Expense {
+  id: string;
+  amount: number;
+  category: string;
+  date: string;
+  description: string;
 }
 
 export interface YearlyStats {
@@ -39,6 +48,7 @@ export interface YearlyStats {
     expense: number;
     balance: number;
   }>;
+  expenses: Expense[];
 }
 
 export interface CategoryMonthlyData {
@@ -87,23 +97,35 @@ export function calculateMonthlyStats(year: number, month: number): MonthlyStats
   let income = 0;
   let expense = 0;
   const categoryStats: Record<string, CategoryStats> = {};
+  const expenses: Expense[] = [];
 
-  transactions.forEach(t => {
+  transactions.forEach((t, index) => {
     const amount = parseFloat(t["金额"]);
     const category = t["分类"];
 
     if (amount > 0) {
       income += amount;
     } else {
-      expense += Math.abs(amount);
+      const absAmount = Math.abs(amount);
+      expense += absAmount;
       
+      // Add to expenses array
+      expenses.push({
+        id: `${year}-${String(month).padStart(2, '0')}-${index}`,
+        amount: absAmount,
+        category,
+        date: t["日期"],
+        description: t["描述"] || t["交易对方"] || '无描述'
+      });
+      
+      // Update category stats
       if (!categoryStats[category]) {
         categoryStats[category] = {
           amount: 0,
           count: 0
         };
       }
-      categoryStats[category].amount += Math.abs(amount);
+      categoryStats[category].amount += absAmount;
       categoryStats[category].count += 1;
     }
   });
@@ -113,7 +135,8 @@ export function calculateMonthlyStats(year: number, month: number): MonthlyStats
     expense,
     balance: income - expense,
     categoryStats,
-    totalTransactions: transactions.length
+    totalTransactions: transactions.length,
+    expenses
   };
 }
 
@@ -180,12 +203,34 @@ export function calculateYearlyStats(year: number): YearlyStats {
     });
   }
 
+  // Prepare expenses data
+  const expenses: Expense[] = [];
+  for (const file of csvFiles) {
+    const month = parseInt(file.replace('.csv', ''));
+    const filePath = path.join(dataDir, file);
+    const transactions = readCSV(filePath);
+
+    transactions.forEach((t, index) => {
+      const amount = parseFloat(t["金额"]);
+      if (amount < 0) { // Only include expenses (negative amounts)
+        expenses.push({
+          id: `${year}-${String(month).padStart(2, '0')}-${index}`,
+          amount: Math.abs(amount), // Store as positive for consistency
+          category: t["分类"],
+          date: t["日期"],
+          description: t["描述"] || t["交易对方"] || '无描述'
+        });
+      }
+    });
+  }
+
   return {
     totalIncome,
     totalExpense,
     totalBalance: totalIncome - totalExpense,
     categoryStats,
-    monthlyData
+    monthlyData,
+    expenses
   };
 }
 

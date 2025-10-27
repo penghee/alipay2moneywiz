@@ -2,12 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, TrendingUp, DollarSign, PieChart, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Calendar, TrendingUp, DollarSign, PieChart, BarChart3, Filter } from 'lucide-react';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import dynamic from 'next/dynamic';
+
+// Dynamically import client-side components
+const ThresholdSlider = dynamic(
+  () => import('@/components/ThresholdSlider'),
+  { ssr: false }
+);
+
+const ExpenseBreakdown = dynamic(
+  () => import('@/components/ExpenseBreakdown'),
+  { ssr: false }
+);
 
 interface CategoryStats {
   amount: number;
   count: number;
+}
+
+interface Expense {
+  id: string;
+  amount: number;
+  category: string;
+  date: string;
+  description: string;
 }
 
 interface MonthlyStats {
@@ -16,6 +36,7 @@ interface MonthlyStats {
   balance: number;
   categoryStats: Record<string, CategoryStats>;
   totalTransactions: number;
+  expenses?: Expense[];
 }
 
 export default function MonthPage({ params }: { params: Promise<{ year: string; month: string }> }) {
@@ -236,6 +257,27 @@ export default function MonthPage({ params }: { params: Promise<{ year: string; 
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+
+        {/* Threshold-based Expense Analysis */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Filter className="h-5 w-5 mr-2" />
+              支出阈值分析
+            </h3>
+            <div className="w-1/2 max-w-md">
+              <ThresholdSlider />
+            </div>
+          </div>
+          
+          {stats.expenses && stats.expenses.length > 0 ? (
+            <ExpenseBreakdown expenses={stats.expenses} />
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              暂无详细的交易数据用于阈值分析
+            </div>
+          )}
         </div>
 
         {/* Category Details Table */}

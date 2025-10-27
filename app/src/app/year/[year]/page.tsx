@@ -2,12 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, TrendingUp, DollarSign, BarChart3, PieChart, Wallet } from 'lucide-react';
+import { ArrowLeft, Calendar, TrendingUp, DollarSign, BarChart3, PieChart, Wallet, Filter } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+// Dynamically import client-side components
+const ThresholdSlider = dynamic(
+  () => import('@/components/ThresholdSlider'),
+  { ssr: false }
+);
+
+const ExpenseBreakdown = dynamic(
+  () => import('@/components/ExpenseBreakdown'),
+  { ssr: false }
+);
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 
 interface CategoryStats {
   amount: number;
   count: number;
+}
+
+interface Expense {
+  id: string;
+  amount: number;
+  category: string;
+  date: string;
+  description: string;
 }
 
 interface YearlyStats {
@@ -21,6 +41,7 @@ interface YearlyStats {
     expense: number;
     balance: number;
   }>;
+  expenses?: Expense[]; // Add expenses to the stats if available
 }
 
 interface MonthData {
@@ -228,7 +249,56 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
             </div>
           </div>
         </div>
+      
+        {/* Monthly Trend Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Monthly Trend */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <BarChart3 className="h-5 w-5 mr-2" />
+              月度趋势
+            </h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value: number, name: string) => [
+                    `¥${formatMoney(value)}`, 
+                    name === 'income' ? '退款' : name === 'expense' ? '支出' : '净支出'
+                  ]}
+                />
+                <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} />
+                <Line type="monotone" dataKey="expense" stroke="#ef4444" strokeWidth={2} />
+                <Line type="monotone" dataKey="balance" stroke="#3b82f6" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
 
+          {/* Monthly Comparison */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <BarChart3 className="h-5 w-5 mr-2" />
+              收支对比
+            </h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value: number, name: string) => [
+                    `¥${formatMoney(value)}`, 
+                    name === 'income' ? '退款' : '支出'
+                  ]}
+                />
+                <Bar dataKey="income" fill="#10b981" />
+                <Bar dataKey="expense" fill="#ef4444" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
         {/* Category Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Category Distribution Pie Chart */}
@@ -350,57 +420,27 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
             </table>
           </div>
         </div>
-
-        {/* Monthly Trend Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Monthly Trend */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <BarChart3 className="h-5 w-5 mr-2" />
-              月度趋势
+        
+        {/* Threshold-based Expense Analysis */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Filter className="h-5 w-5 mr-2" />
+              支出阈值分析
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip 
-                  formatter={(value: number, name: string) => [
-                    `¥${formatMoney(value)}`, 
-                    name === 'income' ? '退款' : name === 'expense' ? '支出' : '净支出'
-                  ]}
-                />
-                <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} />
-                <Line type="monotone" dataKey="expense" stroke="#ef4444" strokeWidth={2} />
-                <Line type="monotone" dataKey="balance" stroke="#3b82f6" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="w-1/2 max-w-md">
+              <ThresholdSlider />
+            </div>
           </div>
-
-          {/* Monthly Comparison */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <BarChart3 className="h-5 w-5 mr-2" />
-              收支对比
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip 
-                  formatter={(value: number, name: string) => [
-                    `¥${formatMoney(value)}`, 
-                    name === 'income' ? '退款' : '支出'
-                  ]}
-                />
-                <Bar dataKey="income" fill="#10b981" />
-                <Bar dataKey="expense" fill="#ef4444" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
+          
+          {stats.expenses && stats.expenses.length > 0 ? (
+            <ExpenseBreakdown expenses={stats.expenses} />
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              暂无详细的交易数据用于阈值分析
+            </div>
+          )}
+        </div>    
         {/* Monthly Details */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
