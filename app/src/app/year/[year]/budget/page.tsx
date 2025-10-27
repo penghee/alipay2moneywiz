@@ -68,6 +68,8 @@ const getCategoryColor = (category: string): string => {
   return color;
 };
 import { fetchYearlyBudget, updateYearlyBudget, fetchBudgetProgress } from '@/lib/api/budget';
+import { BudgetAlerts } from '@/components/BudgetAlerts';
+import appConfig from '@/config/app_config.json';
 
 interface BudgetProgressCategory {
   budget: number;
@@ -196,6 +198,14 @@ export default function BudgetPage({ params }: { params: Promise<{ year: string 
             {year}年 预算管理
           </h1>
         </div>
+
+        {/* Budget Alerts */}
+        {budgetProgress?.categories && (
+          <BudgetAlerts 
+            categories={budgetProgress.categories} 
+            budgetUsageThreshold={appConfig.spendingAnalysis.budgetUsageThreshold.default}
+          />
+        )}
 
         {/* Total Budget */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
