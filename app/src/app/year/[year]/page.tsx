@@ -53,6 +53,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
   const [months, setMonths] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState<number | null>(null);
+  const [prevYearStats, setPrevYearStats] = useState<YearlyStats | null>(null);
   const [budgetUsed, setBudgetUsed] = useState<number>(0);
   const [totalBudget, setTotalBudget] = useState<number>(0);
   const router = useRouter();
@@ -72,11 +73,17 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
         
         setYear(yearNum);
         
-        const [statsRes, monthsRes, budgetRes] = await Promise.all([
+        const [statsRes, monthsRes, budgetRes, prevYearRes] = await Promise.all([
           fetch(`/api/stats/yearly/${yearNum}`),
           fetch(`/api/years/${yearNum}/months`),
-          fetch(`/api/budget/progress?year=${yearNum}`).then(res => res.ok ? res.json() : { total: { budget: 0, spent: 0 } })
+          fetch(`/api/budget/progress?year=${yearNum}`).then(res => res.ok ? res.json() : { total: { budget: 0, spent: 0 } }),
+          // Fetch previous year's data for comparison
+          fetch(`/api/stats/yearly/${yearNum - 1}`).then(res => res.ok ? res.json() : null).catch(() => null)
         ]);
+        
+        if (prevYearRes) {
+          setPrevYearStats(prevYearRes);
+        }
 
         // 设置预算数据
         if (budgetRes && budgetRes.total) {
@@ -186,7 +193,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">总退款</p>
+                <p className="text-sm font-medium text-gray-600">总收入</p>
                 <p className="text-2xl font-bold text-green-600">
                   ¥{formatMoney(stats.totalIncome)}
                 </p>
@@ -266,7 +273,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
                 <Tooltip 
                   formatter={(value: number, name: string) => [
                     `¥${formatMoney(value)}`, 
-                    name === 'income' ? '退款' : name === 'expense' ? '支出' : '净支出'
+                    name === 'income' ? '收入' : name === 'expense' ? '支出' : '净支出'
                   ]}
                 />
                 <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} />
@@ -290,7 +297,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
                 <Tooltip 
                   formatter={(value: number, name: string) => [
                     `¥${formatMoney(value)}`, 
-                    name === 'income' ? '退款' : '支出'
+                    name === 'income' ? '收入' : '支出'
                   ]}
                 />
                 <Bar dataKey="income" fill="#10b981" />
@@ -389,6 +396,9 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     笔数
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    同比
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -413,6 +423,16 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.count}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {prevYearStats?.categoryStats[item.name] ? (
+                        <span className={`${item.value > (prevYearStats.categoryStats[item.name]?.amount || 0) ? 'text-red-600' : 'text-green-600'}`}>
+                          {item.value > (prevYearStats.categoryStats[item.name]?.amount || 0) ? '↑' : '↓'}
+                          {prevYearStats.categoryStats[item.name]?.amount ? 
+                            `${Math.abs(Math.round((item.value / prevYearStats.categoryStats[item.name].amount - 1) * 100))}%` :
+                            'N/A'}
+                        </span>
+                      ) : 'N/A'}
                     </td>
                   </tr>
                 ))}

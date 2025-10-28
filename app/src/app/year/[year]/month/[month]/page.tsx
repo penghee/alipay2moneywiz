@@ -37,6 +37,14 @@ interface MonthlyStats {
   categoryStats: Record<string, CategoryStats>;
   totalTransactions: number;
   expenses?: Expense[];
+  prevMonthStats?: {
+    amount: number;
+    count: number;
+  };
+  prevYearStats?: {
+    amount: number;
+    count: number;
+  };
 }
 
 export default function MonthPage({ params }: { params: Promise<{ year: string; month: string }> }) {
@@ -44,6 +52,14 @@ export default function MonthPage({ params }: { params: Promise<{ year: string; 
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState<number | null>(null);
   const [month, setMonth] = useState<number | null>(null);
+  const [prevMonthData, setPrevMonthData] = useState<Record<string, CategoryStats>>({});
+  const [prevYearData, setPrevYearData] = useState<Record<string, CategoryStats>>({});
+  
+  // Type for the monthly API response
+  interface MonthlyApiResponse {
+    categoryStats?: Record<string, CategoryStats>;
+    // Add other fields from the API response if needed
+  }
   const router = useRouter();
 
   useEffect(() => {
@@ -63,10 +79,32 @@ export default function MonthPage({ params }: { params: Promise<{ year: string; 
         setYear(yearNum);
         setMonth(monthNum);
         
-        const response = await fetch(`/api/stats/monthly/${yearNum}/${monthNum}`);
-        if (response.ok) {
-          const data = await response.json();
+        const [currentMonthRes, prevMonthRes, prevYearRes] = await Promise.all([
+          fetch(`/api/stats/monthly/${yearNum}/${monthNum}`),
+          // Get previous month's data
+          fetch(`/api/stats/monthly/${
+            monthNum === 1 ? yearNum - 1 : yearNum
+          }/${monthNum === 1 ? 12 : monthNum - 1}`).then(res => res.ok ? res.json() : {}) as Promise<MonthlyApiResponse>,
+          // Get same month last year's data
+          fetch(`/api/stats/monthly/${yearNum - 1}/${monthNum}`).then(res => res.ok ? res.json() : {}) as Promise<MonthlyApiResponse>
+        ]);
+
+        if (currentMonthRes.ok) {
+          const data = await currentMonthRes.json();
           setStats(data);
+          
+          // Process comparison data
+          if (prevMonthRes && prevMonthRes.categoryStats) {
+            setPrevMonthData(prevMonthRes.categoryStats);
+          } else {
+            setPrevMonthData({});
+          }
+          
+          if (prevYearRes && prevYearRes.categoryStats) {
+            setPrevYearData(prevYearRes.categoryStats);
+          } else {
+            setPrevYearData({});
+          }
         }
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -154,7 +192,7 @@ export default function MonthPage({ params }: { params: Promise<{ year: string; 
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">退款</p>
+                <p className="text-sm font-medium text-gray-600">收入</p>
                 <p className="text-2xl font-bold text-green-600">
                   ¥{formatMoney(stats.income)}
                 </p>
@@ -303,6 +341,12 @@ export default function MonthPage({ params }: { params: Promise<{ year: string; 
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     笔数
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    环比上月
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    同比去年
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -327,6 +371,26 @@ export default function MonthPage({ params }: { params: Promise<{ year: string; 
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.count}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {prevMonthData[item.name] ? (
+                        <span className={`${item.value > (prevMonthData[item.name]?.amount || 0) ? 'text-red-600' : 'text-green-600'}`}>
+                          {item.value > (prevMonthData[item.name]?.amount || 0) ? '↑' : '↓'}
+                          {prevMonthData[item.name]?.amount ? 
+                            `${Math.abs(Math.round((item.value / prevMonthData[item.name].amount - 1) * 100))}%` :
+                            'N/A'}
+                        </span>
+                      ) : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {prevYearData[item.name] ? (
+                        <span className={`${item.value > (prevYearData[item.name]?.amount || 0) ? 'text-red-600' : 'text-green-600'}`}>
+                          {item.value > (prevYearData[item.name]?.amount || 0) ? '↑' : '↓'}
+                          {prevYearData[item.name]?.amount ? 
+                            `${Math.abs(Math.round((item.value / prevYearData[item.name].amount - 1) * 100))}%` :
+                            'N/A'}
+                        </span>
+                      ) : 'N/A'}
                     </td>
                   </tr>
                 ))}
