@@ -28,18 +28,30 @@ export default function NewTransactionPage() {
     type: 'expense', // 'expense' or 'income'
   });
   
-  // Get categories from the category map
-  const categories = Object.keys(categoryMap).sort();
+  // Get categories based on transaction type
+  const categories = formData.type === 'income' 
+    ? ['工资', '其他'] 
+    : Object.keys(categoryMap).sort();
   
   // Get owners from bill_owners.json
   const { defaultOwner, owners } = billOwnersData;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => {
+      // If transaction type changes, reset category
+      const newData = {
+        ...prev,
+        [name]: value
+      };
+      
+      // If type changed, reset category
+      if (name === 'type') {
+        newData.category = '';
+      }
+      
+      return newData;
+    });
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,12 +94,30 @@ export default function NewTransactionPage() {
         throw new Error(errorData.error || '保存交易记录时出错');
       }
 
-      // Show success message and redirect
-      // You might want to use a toast notification here instead
-      alert('交易记录已保存成功！');
+      // Show success message and ask if user wants to continue
+      const shouldContinue = window.confirm('交易记录已保存成功！\n\n是否继续添加下一条记录？');
       
-      // Redirect to home or transaction list
-      router.push('/');
+      if (shouldContinue) {
+        // Reset form but keep the same transaction type and owner
+        const currentType = formData.type;
+        const currentOwner = formData.owner;
+        setFormData({
+          account: '',
+          transfer: '',
+          description: '',
+          counterparty: '',
+          category: '',
+          date: new Date().toISOString().split('T')[0],
+          note: '',
+          tags: '',
+          amount: '',
+          owner: currentOwner,
+          type: currentType,
+        });
+      } else {
+        // Redirect to home if user doesn't want to continue
+        router.push('/');
+      }
       
     } catch (err) {
       console.error('保存交易记录时出错:', err);
