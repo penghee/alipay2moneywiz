@@ -17,7 +17,11 @@ export async function GET(
       );
     }
 
-    const stats = calculateYearlyStats(year);
+    // Get owner filter from query params
+    const { searchParams } = new URL(request.url);
+    const ownerId = searchParams.get('owner') || undefined;
+
+    const stats = calculateYearlyStats(year, ownerId);
     return NextResponse.json(stats);
   } catch (error) {
     return NextResponse.json(

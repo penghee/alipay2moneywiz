@@ -7,6 +7,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const year = searchParams.get('year');
     const month = searchParams.get('month');
+    const owner = searchParams.get('owner');
     
     if (!year) {
       return NextResponse.json(
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
       );
     }
     
-    const progress = await getBudgetProgressFromDB(yearNum, monthNum);
+    const progress = await getBudgetProgressFromDB(yearNum, monthNum, owner || undefined);
     return NextResponse.json(progress);
   } catch (error) {
     console.error('Error fetching budget progress:', error);

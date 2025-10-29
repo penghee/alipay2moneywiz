@@ -62,7 +62,7 @@ function mapCategory(
 }
 
 // 处理支付宝账单
-function processAlipay(content: string, accountMap: Record<string, string>, categoryMap: Record<string, string[]>, owner: string = '爸爸') {
+function processAlipay(content: string, accountMap: Record<string, string>, categoryMap: Record<string, string[]>, owner: string) {
   // 支付宝 CSV 文件前面有元数据，需要提取真实的交易数据
   const lines = content.split('\n');
   let realContent = '';
@@ -132,11 +132,16 @@ function processAlipay(content: string, accountMap: Record<string, string>, cate
     transactions.push(transaction);
   }
 
-  return transactions;
+  // 从第一条记录获取年月信息
+  const firstDate = new Date(transactions[0]['日期']);
+  const year = firstDate.getFullYear();
+  const month = firstDate.getMonth() + 1;
+
+  return { transactions, year, month };
 }
 
 // 处理微信账单
-function processWechat(content: Buffer, accountMap: Record<string, string>, categoryMap: Record<string, string[]>, owner: string = '爸爸') {
+function processWechat(content: Buffer, accountMap: Record<string, string>, categoryMap: Record<string, string[]>, owner: string) {
   const workbook = XLSX.read(content, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
@@ -208,11 +213,16 @@ function processWechat(content: Buffer, accountMap: Record<string, string>, cate
     transactions.push(transaction);
   }
 
-  return transactions;
+  // 从第一条记录获取年月信息
+  const firstDate = new Date(transactions[0]['日期']);
+  const year = firstDate.getFullYear();
+  const month = firstDate.getMonth() + 1;
+
+  return { transactions, year, month };
 }
 
 // 保存数据
-function saveData(transactions: Record<string, string>[], year: number, month: number, platform: string, owner: string = '爸爸') {
+function saveData(transactions: Record<string, string>[], year: number, month: number, platform: string, owner: string) {
   // 确保年份目录存在
   const yearDir = DATA_PATHS.ensureYearDirectory(year);
   
@@ -221,10 +231,16 @@ function saveData(transactions: Record<string, string>[], year: number, month: n
   const filename = `${year}${monthStr}_${platform}.csv`;
   
   // 确保每条记录都有账单人
-  transactions = transactions.map(transaction => ({
-    ...transaction,
-    '账单人': transaction['账单人'] || owner
-  }));
+  transactions = transactions.map(transaction => {
+    // 确保账单人字段存在且不为空
+    const transactionOwner = transaction['账单人']?.trim() || owner;
+    return {
+      ...transaction,
+      '账单人': transactionOwner,
+      // 确保owner字段也设置，用于后端的兼容性
+      'owner': transactionOwner
+    };
+  });
   const filepath = path.join(yearDir, filename);
 
   // 检查文件是否存在并读取现有数据
@@ -301,13 +317,13 @@ function saveData(transactions: Record<string, string>[], year: number, month: n
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const platform = formData.get('platform') as string | null;
-    const owner = (formData.get('owner') as string) || '爸爸';
+    const file = formData.get('file') as File;
+    const platform = formData.get('platform') as string;
+    const owner = formData.get('owner') as string || '爸爸';
 
     console.log('Upload request received:', { 
-      fileName: file?.name, 
-      fileSize: file?.size, 
+      fileName: file.name, 
+      fileSize: file.size, 
       platform 
     });
 
@@ -335,15 +351,15 @@ export async function POST(request: NextRequest) {
       console.log('Processing Alipay CSV file...');
       const content = await file.text();
       console.log('File content length:', content.length);
-      transactions = processAlipay(content, accountMap, categoryMap, owner);
-      console.log('Processed transactions:', transactions.length);
+      const { transactions, year, month } = processAlipay(content, accountMap, categoryMap, owner);
+      saveData(transactions, year, month, 'alipay', owner);
     } else if (platform === 'wechat') {
       // 处理微信 XLSX 文件
       console.log('Processing Wechat XLSX file...');
       const buffer = Buffer.from(await file.arrayBuffer());
       console.log('File buffer length:', buffer.length);
-      transactions = processWechat(buffer, accountMap, categoryMap, owner);
-      console.log('Processed transactions:', transactions.length);
+      const { transactions, year, month } = processWechat(buffer, accountMap, categoryMap, owner);
+      saveData(transactions, year, month, 'wechat', owner);
     }
 
     if (transactions.length === 0) {

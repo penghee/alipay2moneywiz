@@ -16,7 +16,11 @@ export async function GET(
       );
     }
 
-    const months = getAvailableMonths(year);
+    // Get owner filter from query params
+    const { searchParams } = new URL(request.url);
+    const ownerId = searchParams.get('owner') || undefined;
+
+    const months = getAvailableMonths(year, ownerId);
     return NextResponse.json({ months });
   } catch (error) {
     return NextResponse.json(

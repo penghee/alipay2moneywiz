@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, TrendingUp, DollarSign, BarChart3, PieChart, Wallet, Filter } from 'lucide-react';
+import { ArrowLeft, Calendar, TrendingUp, DollarSign, BarChart3, PieChart, Wallet, Filter, User } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import ownersData from '@/config/bill_owners.json';
 
 // Dynamically import client-side components
 const ThresholdSlider = dynamic(
@@ -56,7 +57,13 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
   const [prevYearStats, setPrevYearStats] = useState<YearlyStats | null>(null);
   const [budgetUsed, setBudgetUsed] = useState<number>(0);
   const [totalBudget, setTotalBudget] = useState<number>(0);
+  const [selectedOwner, setSelectedOwner] = useState<string>('all');
   const router = useRouter();
+
+  const owners = useMemo(() => [
+    { id: 'all', name: '全部' },
+    ...ownersData.owners
+  ], []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -73,12 +80,18 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
         
         setYear(yearNum);
         
+        // Build query parameters
+        const queryParams = new URLSearchParams();
+        if (selectedOwner !== 'all') {
+          queryParams.append('owner', selectedOwner);
+        }
+        
         const [statsRes, monthsRes, budgetRes, prevYearRes] = await Promise.all([
-          fetch(`/api/stats/yearly/${yearNum}`),
-          fetch(`/api/years/${yearNum}/months`),
-          fetch(`/api/budget/progress?year=${yearNum}`).then(res => res.ok ? res.json() : { total: { budget: 0, spent: 0 } }),
+          fetch(`/api/stats/yearly/${yearNum}?${queryParams.toString()}`),
+          fetch(`/api/years/${yearNum}/months?${queryParams.toString()}`),
+          fetch(`/api/budget/progress?year=${yearNum}&${queryParams.toString()}`).then(res => res.ok ? res.json() : { total: { budget: 0, spent: 0 } }),
           // Fetch previous year's data for comparison
-          fetch(`/api/stats/yearly/${yearNum - 1}`).then(res => res.ok ? res.json() : null).catch(() => null)
+          fetch(`/api/stats/yearly/${yearNum - 1}?${queryParams.toString()}`).then(res => res.ok ? res.json() : null).catch(() => null)
         ]);
         
         if (prevYearRes) {
@@ -108,7 +121,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
     };
 
     fetchData();
-  }, [params]);
+  }, [params, selectedOwner]);
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat('zh-CN', {
@@ -195,11 +208,28 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
             <span>返回</span>
           </button>
           
-          <div className="flex items-center space-x-3">
-            <Calendar className="h-8 w-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-gray-900">
-              {year || '未知'}年 财务统计
-            </h1>
+          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+            <div className="flex items-center space-x-3">
+              <Calendar className="h-8 w-8 text-blue-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                {year || '未知'}年 财务统计
+              </h1>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <User className="h-5 w-5 text-gray-500" />
+              <select 
+                value={selectedOwner}
+                onChange={(e) => setSelectedOwner(e.target.value)}
+                className="w-32 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {owners.map((owner) => (
+                  <option key={owner.id} value={owner.id}>
+                    {owner.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 

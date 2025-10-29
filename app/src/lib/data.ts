@@ -13,6 +13,8 @@ export interface Transaction {
   备注: string;
   标签: string;
   金额: string;
+  owner?: string;
+  账单人?: string;
 }
 
 export interface CategoryStats {
@@ -79,12 +81,29 @@ export function readCSV(filePath: string): Transaction[] {
     delimiter: ",",
     columns: true,
     trim: true,
-  }) as Transaction[];
-  return records;
+  }) as any[];
+  
+  // Map the 账单人 field to owner
+  return records.map(record => ({
+    ...record,
+    owner: record['账单人'] || ''
+  })) as Transaction[];
+}
+
+// 获取所有者名称映射
+function getOwnerName(ownerId: string): string {
+  try {
+    const owners = require('@/config/bill_owners.json').owners as Array<{id: string, name: string}>;
+    const owner = owners.find(o => o.id === ownerId);
+    return owner ? owner.name : ownerId; // Return the ID if not found
+  } catch (error) {
+    console.error('Error loading owner mapping:', error);
+    return ownerId; // Fallback to ID if there's an error
+  }
 }
 
 // 计算月度统计
-export function calculateMonthlyStats(year: number, month: number): MonthlyStats {
+export function calculateMonthlyStats(year: number, month: number, ownerId?: string): MonthlyStats {
   const dataDir = getYearDataDirectory(year);
   const filePath = path.join(dataDir, `${String(month).padStart(2, "0")}.csv`);
 
@@ -100,6 +119,14 @@ export function calculateMonthlyStats(year: number, month: number): MonthlyStats
   const expenses: Expense[] = [];
 
   transactions.forEach((t, index) => {
+    // Skip transactions that don't match the owner filter
+    if (ownerId) {
+      const ownerName = getOwnerName(ownerId);
+      if (t.owner !== ownerName) {
+        return;
+      }
+    }
+    
     const amount = parseFloat(t["金额"]);
     const category = t["分类"];
 
@@ -141,7 +168,7 @@ export function calculateMonthlyStats(year: number, month: number): MonthlyStats
 }
 
 // 计算年度统计
-export function calculateYearlyStats(year: number): YearlyStats {
+export function calculateYearlyStats(year: number, ownerId?: string): YearlyStats {
   const dataDir = getYearDataDirectory(year);
 
   if (!existsSync(dataDir)) {
@@ -172,6 +199,15 @@ export function calculateYearlyStats(year: number): YearlyStats {
     let monthExpense = 0;
 
     transactions.forEach(t => {
+      // Skip transactions that don't match the owner filter
+      if (ownerId && ownerId !== 'all') {
+        const ownerName = getOwnerName(ownerId);
+        // Check both owner fields for backward compatibility
+        if (t.owner !== ownerName && t['账单人'] !== ownerName) {
+          return;
+        }
+      }
+
       const amount = parseFloat(t["金额"]);
       const category = t["分类"];
 
@@ -212,6 +248,15 @@ export function calculateYearlyStats(year: number): YearlyStats {
 
     transactions.forEach((t, index) => {
       const amount = parseFloat(t["金额"]);
+      // Skip transactions that don't match the owner filter
+      if (ownerId && ownerId !== 'all') {
+        const ownerName = getOwnerName(ownerId);
+        // Check both owner fields for backward compatibility
+        if (t.owner !== ownerName && t['账单人'] !== ownerName) {
+          console.log('Skipping transaction:', t);
+          return;
+        }
+      }
       if (amount < 0) { // Only include expenses (negative amounts)
         expenses.push({
           id: `${year}-${String(month).padStart(2, '0')}-${index}`,
@@ -266,7 +311,7 @@ export function getAvailableYears(): number[] {
 }
 
 // 获取指定年份的可用月份
-export function getAvailableMonths(year: number): number[] {
+export function getAvailableMonths(year: number, ownerId?: string): number[] {
   const dataDir = getYearDataDirectory(year);
   
   try {
@@ -274,11 +319,27 @@ export function getAvailableMonths(year: number): number[] {
       return [];
     }
 
-    const months = readdirSync(dataDir)
+    let months = readdirSync(dataDir)
       .filter(f => f.endsWith('.csv') && !f.includes('alipay') && !f.includes('wechat'))
       .map(f => parseInt(f.replace('.csv', '')))
-      .filter(month => !isNaN(month))
-      .sort((a, b) => a - b);
+      .filter(month => !isNaN(month));
+
+      // If owner filter is provided, check each month's transactions
+      if (ownerId) {
+        const ownerName = getOwnerName(ownerId);
+        months = months.filter(month => {
+          try {
+            const filePath = path.join(dataDir, `${month}.csv`);
+            const transactions = readCSV(filePath);
+            return transactions.some(t => t.owner === ownerName);
+          } catch (error) {
+            console.error(`Error reading month ${month}:`, error);
+            return false;
+          }
+        });
+      }
+
+    months.sort((a, b) => a - b);
 
     return months;
   } catch (error) {

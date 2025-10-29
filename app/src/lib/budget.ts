@@ -64,7 +64,7 @@ export async function setYearlyBudget(
 
 import { calculateYearlyStats, calculateMonthlyStats } from './data';
 
-export async function getBudgetProgress(year: number, month?: number) {
+export async function getBudgetProgress(year: number, month?: number, ownerId?: string) {
   try {
     // 获取预算配置
     const { total: yearlyBudget, categories: categoryBudgets } = await getYearlyBudget(year);
@@ -75,7 +75,7 @@ export async function getBudgetProgress(year: number, month?: number) {
     
     if (month !== undefined) {
       // 计算月度支出
-      const monthlyStats = calculateMonthlyStats(year, month);
+      const monthlyStats = calculateMonthlyStats(year, month, ownerId);
       totalSpent = monthlyStats.expense;
       
       // 计算各分类支出
@@ -84,7 +84,7 @@ export async function getBudgetProgress(year: number, month?: number) {
       });
     } else {
       // 计算年度支出
-      const yearlyStats = calculateYearlyStats(year);
+      const yearlyStats = calculateYearlyStats(year, ownerId);
       totalSpent = yearlyStats.totalExpense;
       
       // 计算各分类年度支出
