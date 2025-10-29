@@ -114,7 +114,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
     return new Intl.NumberFormat('zh-CN', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    }).format(Math.abs(amount));
+    }).format(amount);
   };
 
   if (loading) {
@@ -163,6 +163,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
 
   // Calculate average monthly expense
   const averageMonthlyExpense = stats ? Math.round((stats.totalExpense / stats.monthlyData.length) * 100) / 100 : 0;
+  const averageMonthlyIncome = stats ? Math.round((stats.totalIncome / stats.monthlyData.length) * 100) / 100 : 0;
 
   // Calculate average monthly expense per category
   const averageCategoryExpenses = stats ? Object.entries(stats.categoryStats)
@@ -203,7 +204,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -231,9 +232,13 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">净支出</p>
+                <p className="text-sm font-medium text-gray-600">结余</p>
                 <p className={`text-2xl font-bold ${stats.totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   ¥{formatMoney(stats.totalBalance)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {/* 结余比率 */}
+                  结余比率 {((stats.totalBalance / stats.totalIncome) * 100).toFixed(2)}%
                 </p>
               </div>
               <DollarSign className="h-8 w-8 text-blue-600" />
@@ -255,6 +260,22 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
               <BarChart3 className="h-8 w-8 text-purple-600" />
             </div>
           </div>
+          {/* 平均月收入 */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">平均月收入</p>
+                <p className="text-2xl font-bold text-green-600">
+                  ¥{formatMoney(averageMonthlyIncome)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  共 {stats.monthlyData.length} 个月数据
+                </p>
+              </div>
+              <BarChart3 className="h-8 w-8 text-green-600" />
+            </div>
+          </div>
+
 
           {/* 预算概览 */}
           <div 
@@ -303,7 +324,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
                 <Tooltip 
                   formatter={(value: number, name: string) => [
                     `¥${formatMoney(value)}`, 
-                    name === 'income' ? '收入' : name === 'expense' ? '支出' : '净支出'
+                    name === 'income' ? '收入' : name === 'expense' ? '支出' : '结余'
                   ]}
                 />
                 <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} />

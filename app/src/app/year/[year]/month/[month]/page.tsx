@@ -120,7 +120,7 @@ export default function MonthPage({ params }: { params: Promise<{ year: string; 
     return new Intl.NumberFormat('zh-CN', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    }).format(Math.abs(amount));
+    }).format(amount);
   };
 
   if (loading) {
@@ -216,7 +216,7 @@ export default function MonthPage({ params }: { params: Promise<{ year: string; 
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">净支出</p>
+                <p className="text-sm font-medium text-gray-600">结余</p>
                 <p className={`text-2xl font-bold ${stats.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   ¥{formatMoney(stats.balance)}
                 </p>
