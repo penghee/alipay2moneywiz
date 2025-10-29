@@ -161,6 +161,20 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
     }))
     .sort((a, b) => b.value - a.value);
 
+  // Calculate average monthly expense
+  const averageMonthlyExpense = stats ? Math.round((stats.totalExpense / stats.monthlyData.length) * 100) / 100 : 0;
+
+  // Calculate average monthly expense per category
+  const averageCategoryExpenses = stats ? Object.entries(stats.categoryStats)
+    .map(([category, data]) => ({
+      category,
+      average: Math.round((data.amount / stats.monthlyData.length) * 100) / 100,
+      total: data.amount,
+      count: data.count,
+      percentage: Math.round((data.amount / stats.totalExpense) * 100) || 0
+    }))
+    .sort((a, b) => b.average - a.average) : [];
+
   // 颜色配置
   const COLORS = [
     '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
@@ -223,6 +237,22 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
                 </p>
               </div>
               <DollarSign className="h-8 w-8 text-blue-600" />
+            </div>
+          </div>
+
+          {/* 平均月支出 */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">平均月支出</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  ¥{formatMoney(averageMonthlyExpense)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  共 {stats.monthlyData.length} 个月数据
+                </p>
+              </div>
+              <BarChart3 className="h-8 w-8 text-purple-600" />
             </div>
           </div>
 
@@ -331,7 +361,7 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value: number) => [`¥${formatMoney(value)}`, '金额']}
+                  formatter={(value: number, name: string) => [`¥${formatMoney(value)}`, name]}
                 />
               </RechartsPieChart>
             </ResponsiveContainer>
@@ -374,68 +404,78 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
             </h3>
             <button
               onClick={() => router.push(`/year/${year}/category`)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
             >
-              查看分类趋势分析 →
+              查看详情
+              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </button>
           </div>
-          
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     分类
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    金额
+                  <th scope="col" className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    总金额
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    月均
+                    <div className="text-xs font-normal text-gray-400">({stats.monthlyData.length}个月)</div>
+                  </th>
+                  <th scope="col" className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     占比
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    笔数
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    同比
+                  <th scope="col" className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    交易笔数
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {pieData.map((item, index) => (
-                  <tr key={item.name}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div 
-                          className="w-4 h-4 rounded-full mr-3"
-                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                        ></div>
-                        <span className="text-sm font-medium text-gray-900">
-                          {item.name}
-                        </span>
-                      </div>
+                {averageCategoryExpenses.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {item.category}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ¥{formatMoney(item.value)}
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-900">
+                      ¥{formatMoney(item.total)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {((item.value / stats.totalExpense) * 100).toFixed(1)}%
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-900">
+                      ¥{formatMoney(item.average)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {item.count}
+                    <td className="px-3 py-3 whitespace-nowrap text-right">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                        {item.percentage}%
+                      </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {prevYearStats?.categoryStats[item.name] ? (
-                        <span className={`${item.value > (prevYearStats.categoryStats[item.name]?.amount || 0) ? 'text-red-600' : 'text-green-600'}`}>
-                          {item.value > (prevYearStats.categoryStats[item.name]?.amount || 0) ? '↑' : '↓'}
-                          {prevYearStats.categoryStats[item.name]?.amount ? 
-                            `${Math.abs(Math.round((item.value / prevYearStats.categoryStats[item.name].amount - 1) * 100))}%` :
-                            'N/A'}
-                        </span>
-                      ) : 'N/A'}
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-500">
+                      {item.count} 笔
                     </td>
                   </tr>
                 ))}
+                {/* 总计行 */}
+                <tr className="bg-gray-50">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">
+                    总计
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-right text-gray-900">
+                    ¥{formatMoney(stats.totalExpense)}
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-right text-gray-900">
+                    ¥{formatMoney(averageMonthlyExpense)}
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap text-right">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-600 text-white">
+                      100%
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-right text-gray-900">
+                    {averageCategoryExpenses.reduce((sum, item) => sum + item.count, 0)} 笔
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

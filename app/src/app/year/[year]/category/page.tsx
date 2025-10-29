@@ -224,7 +224,7 @@ export default function CategoryPage({ params }: { params: Promise<{ year: strin
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip 
-                  formatter={(value: number) => [`¥${formatMoney(value)}`, '金额']}
+                  formatter={(value: number, name: string) => [`¥${formatMoney(value)}`, name]}
                 />
                 <Legend />
                 {Array.from(selectedCategories).map((category, index) => (
