@@ -4,13 +4,16 @@ import { useState, useRef } from 'react';
 import { Upload, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 interface FileUploadProps {
-  onUpload: (file: File, platform: string) => Promise<void>;
+  onUpload: (file: File, platform: string, owner: string) => Promise<void>;
   loading: boolean;
+  owners: Array<{ id: string; name: string }>;
+  defaultOwner: string;
 }
 
-export default function FileUpload({ onUpload, loading }: FileUploadProps) {
+export default function FileUpload({ onUpload, loading, owners, defaultOwner }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [platform, setPlatform] = useState<'alipay' | 'wechat'>('alipay');
+  const [selectedOwner, setSelectedOwner] = useState(defaultOwner);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -49,7 +52,7 @@ export default function FileUpload({ onUpload, loading }: FileUploadProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedFile && platform) {
-      await onUpload(selectedFile, platform);
+      await onUpload(selectedFile, platform, selectedOwner);
     }
   };
 
@@ -68,34 +71,54 @@ export default function FileUpload({ onUpload, loading }: FileUploadProps) {
       </h3>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* 平台选择 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            选择平台
-          </label>
-          <div className="flex space-x-4">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="platform"
-                value="alipay"
-                checked={platform === 'alipay'}
-                onChange={(e) => setPlatform(e.target.value as 'alipay')}
-                className="mr-2"
-              />
-              <span className="text-sm text-gray-700">支付宝</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* 平台选择 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              选择平台
             </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="platform"
-                value="wechat"
-                checked={platform === 'wechat'}
-                onChange={(e) => setPlatform(e.target.value as 'wechat')}
-                className="mr-2"
-              />
-              <span className="text-sm text-gray-700">微信</span>
+            <div className="space-y-2">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="platform"
+                  value="alipay"
+                  checked={platform === 'alipay'}
+                  onChange={(e) => setPlatform(e.target.value as 'alipay')}
+                  className="mr-2"
+                />
+                <span className="text-sm text-gray-700">支付宝</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="platform"
+                  value="wechat"
+                  checked={platform === 'wechat'}
+                  onChange={(e) => setPlatform(e.target.value as 'wechat')}
+                  className="mr-2"
+                />
+                <span className="text-sm text-gray-700">微信</span>
+              </label>
+            </div>
+          </div>
+
+          {/* 账单人选择 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              账单人
             </label>
+            <select
+              value={selectedOwner}
+              onChange={(e) => setSelectedOwner(e.target.value)}
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+            >
+              {owners.map((owner) => (
+                <option key={owner.id} value={owner.name}>
+                  {owner.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

@@ -1,0 +1,17 @@
+{
+  "defaultOwner": "爸爸",
+  "owners": [
+    {
+      "id": "father",
+      "name": "爸爸"
+    },
+    {
+      "id": "mother",
+      "name": "妈妈"
+    },
+    {
+      "id": "zhaozhao",
+      "name": "昭昭"
+    }
+  ]
+}

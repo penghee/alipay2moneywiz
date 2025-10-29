@@ -1,9 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Upload, CheckCircle, AlertCircle, FileText, Calendar } from 'lucide-react';
 import FileUpload from '@/components/FileUpload';
+
+interface BillOwner {
+  id: string;
+  name: string;
+}
+
+interface BillOwnersData {
+  defaultOwner: string;
+  owners: BillOwner[];
+}
 
 interface UploadResult {
   success: boolean;
@@ -15,12 +25,37 @@ interface UploadResult {
 }
 
 export default function ImportPage() {
+  const [billOwners, setBillOwners] = useState<BillOwnersData>({ defaultOwner: '爸爸', owners: [] });
+
+  useEffect(() => {
+    // Load bill owners data
+    const loadBillOwners = async () => {
+      try {
+        // Use dynamic import for the JSON file
+        const billOwnersData = await import('@/config/bill_owners.json');
+        setBillOwners(billOwnersData);
+      } catch (error) {
+        console.error('Failed to load bill owners:', error);
+        // Fallback to default values if loading fails
+        setBillOwners({
+          defaultOwner: '爸爸',
+          owners: [
+            { id: 'father', name: '爸爸' },
+            { id: 'mother', name: '妈妈' },
+            { id: 'zhaozhao', name: '昭昭' }
+          ]
+        });
+      }
+    };
+
+    loadBillOwners();
+  }, []);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleUpload = async (file: File, platform: string) => {
+  const handleUpload = async (file: File, platform: string, owner: string) => {
     setLoading(true);
     setError(null);
     setResult(null);
@@ -29,6 +64,7 @@ export default function ImportPage() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('platform', platform);
+      formData.append('owner', owner);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -165,7 +201,12 @@ export default function ImportPage() {
         )}
 
         {/* 文件上传组件 */}
-        <FileUpload onUpload={handleUpload} loading={loading} />
+        <FileUpload 
+          onUpload={handleUpload} 
+          loading={loading}
+          owners={billOwners.owners}
+          defaultOwner={billOwners.defaultOwner}
+        />
 
         {/* 导入历史 */}
         <div className="mt-8 bg-white rounded-lg shadow-md p-6">

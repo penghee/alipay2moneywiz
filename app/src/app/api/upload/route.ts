@@ -62,7 +62,7 @@ function mapCategory(
 }
 
 // 处理支付宝账单
-function processAlipay(content: string, accountMap: Record<string, string>, categoryMap: Record<string, string[]>) {
+function processAlipay(content: string, accountMap: Record<string, string>, categoryMap: Record<string, string[]>, owner: string = '爸爸') {
   // 支付宝 CSV 文件前面有元数据，需要提取真实的交易数据
   const lines = content.split('\n');
   let realContent = '';
@@ -128,6 +128,7 @@ function processAlipay(content: string, accountMap: Record<string, string>, cate
     }
     transaction['标签'] = '';
     transaction['备注'] = '';
+    transaction['账单人'] = owner;
     transactions.push(transaction);
   }
 
@@ -135,7 +136,7 @@ function processAlipay(content: string, accountMap: Record<string, string>, cate
 }
 
 // 处理微信账单
-function processWechat(content: Buffer, accountMap: Record<string, string>, categoryMap: Record<string, string[]>) {
+function processWechat(content: Buffer, accountMap: Record<string, string>, categoryMap: Record<string, string[]>, owner: string = '爸爸') {
   const workbook = XLSX.read(content, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
@@ -203,6 +204,7 @@ function processWechat(content: Buffer, accountMap: Record<string, string>, cate
     }
     transaction['标签'] = '';
     transaction['备注'] = '';
+    transaction['账单人'] = owner;
     transactions.push(transaction);
   }
 
@@ -210,13 +212,19 @@ function processWechat(content: Buffer, accountMap: Record<string, string>, cate
 }
 
 // 保存数据
-function saveData(transactions: Record<string, string>[], year: number, month: number, platform: string) {
+function saveData(transactions: Record<string, string>[], year: number, month: number, platform: string, owner: string = '爸爸') {
   // 确保年份目录存在
   const yearDir = DATA_PATHS.ensureYearDirectory(year);
   
   // 构建文件路径
   const monthStr = month.toString().padStart(2, '0');
   const filename = `${year}${monthStr}_${platform}.csv`;
+  
+  // 确保每条记录都有账单人
+  transactions = transactions.map(transaction => ({
+    ...transaction,
+    '账单人': transaction['账单人'] || owner
+  }));
   const filepath = path.join(yearDir, filename);
 
   // 检查文件是否存在并读取现有数据
@@ -224,10 +232,22 @@ function saveData(transactions: Record<string, string>[], year: number, month: n
   try {
     const content = readFileSync(filepath, 'utf8');
     if (content.trim()) {
-      existingData = parse(content, {
+      const parsedData = parse(content, {
         columns: true,
         skip_empty_lines: true,
       }) as Record<string, string>[];
+      
+      // Convert to the correct type and ensure all records have the bill owner field
+      existingData = parsedData.map(record => ({
+        ...record,
+        '账单人': record['账单人'] || owner
+      }));
+      
+      // 确保现有数据有账单人字段
+      existingData = existingData.map(record => ({
+        ...record,
+        '账单人': record['账单人'] || owner
+      }));
     }
   } catch (error) {
     // 文件不存在或其他错误，继续使用空数组
@@ -242,11 +262,11 @@ function saveData(transactions: Record<string, string>[], year: number, month: n
   // 保存数据
   const output = stringify(allData, {
     header: true,
-    columns: ['账户', '转账', '描述', '交易对方', '分类', '日期', '备注', '标签', '金额'],
+    columns: ['账户', '转账', '描述', '交易对方', '分类', '日期', '备注', '标签', '金额', '账单人'],
   });
   writeFileSync(filepath, output);
 
-    // 合并到月份文件
+  // 合并到月份文件
   const monthPath = path.join(yearDir, `${monthStr}.csv`);
   try {
     const monthContent = readFileSync(monthPath, 'utf8');
@@ -260,7 +280,7 @@ function saveData(transactions: Record<string, string>[], year: number, month: n
     const mergedData = [...monthTransactions, ...transactions];
     const mergedOutput = stringify(mergedData, {
       header: true,
-      columns: ['账户', '转账', '描述', '交易对方', '分类', '日期', '备注', '标签', '金额'],
+      columns: ['账户', '转账', '描述', '交易对方', '分类', '日期', '备注', '标签', '金额', '账单人'],
     });
     writeFileSync(monthPath, mergedOutput);
   } catch (error) {
@@ -268,7 +288,7 @@ function saveData(transactions: Record<string, string>[], year: number, month: n
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       writeFileSync(monthPath, stringify(transactions, {
         header: true,
-        columns: ['账户', '转账', '描述', '交易对方', '分类', '日期', '备注', '标签', '金额'],
+        columns: ['账户', '转账', '描述', '交易对方', '分类', '日期', '备注', '标签', '金额', '账单人'],
       }));
     } else {
       console.error('Error processing month file:', error);
@@ -281,8 +301,9 @@ function saveData(transactions: Record<string, string>[], year: number, month: n
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const platform = formData.get('platform') as string;
+    const file = formData.get('file') as File | null;
+    const platform = formData.get('platform') as string | null;
+    const owner = (formData.get('owner') as string) || '爸爸';
 
     console.log('Upload request received:', { 
       fileName: file?.name, 
@@ -314,14 +335,14 @@ export async function POST(request: NextRequest) {
       console.log('Processing Alipay CSV file...');
       const content = await file.text();
       console.log('File content length:', content.length);
-      transactions = processAlipay(content, accountMap, categoryMap);
+      transactions = processAlipay(content, accountMap, categoryMap, owner);
       console.log('Processed transactions:', transactions.length);
     } else if (platform === 'wechat') {
       // 处理微信 XLSX 文件
       console.log('Processing Wechat XLSX file...');
       const buffer = Buffer.from(await file.arrayBuffer());
       console.log('File buffer length:', buffer.length);
-      transactions = processWechat(buffer, accountMap, categoryMap);
+      transactions = processWechat(buffer, accountMap, categoryMap, owner);
       console.log('Processed transactions:', transactions.length);
     }
 
@@ -338,7 +359,7 @@ export async function POST(request: NextRequest) {
     const month = firstDate.getMonth() + 1;
 
     // 保存数据
-    const outputPath = saveData(transactions, year, month, platform);
+    const outputPath = saveData(transactions, year, month, platform, owner);
 
     return NextResponse.json({
       success: true,
