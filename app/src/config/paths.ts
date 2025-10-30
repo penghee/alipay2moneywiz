@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 
 // 项目根目录（app 目录的父目录）
-const PROJECT_ROOT = path.join(process.cwd(), '..');
+const PROJECT_ROOT = path.join(process.cwd());
 
 /**
  * 获取数据目录路径
@@ -60,6 +60,8 @@ export function ensureDirectoryExists(dirPath: string): void {
  * 数据目录配置
  */
 export const DATA_PATHS = {
+  // 账单所有者配置
+  billOwners: () => path.join(getConfigDirectory(), 'bill_owners.json'),
   // 项目根目录
   projectRoot: PROJECT_ROOT,
   
@@ -108,5 +110,8 @@ export const DATA_PATHS = {
         throw error;
       }
     }
-  }
+  },
 } as const;
+
+
+export const ASSETS_PATH = path.join(process.cwd(), 'assets', 'assets.csv');
