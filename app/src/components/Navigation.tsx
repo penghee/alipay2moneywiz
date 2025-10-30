@@ -8,7 +8,7 @@ export default function Navigation() {
   
   const navItems = [
     { name: '首页', path: '/' },
-    { name: '资产', path: '/assets' },
+    { name: '资产', path: '/assets-management' },
     { name: '汇总', path: '/summary' },
   ];
 

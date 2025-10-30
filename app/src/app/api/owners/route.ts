@@ -32,30 +32,7 @@ export async function GET() {
     
     // Read existing owners and add display names if missing
     const ownersData: { owners: Owner[] } = JSON.parse(fs.readFileSync(ownersPath, 'utf-8'));
-    
-    // Add display names if they don't exist
-    const updatedOwners = ownersData.owners.map(owner => {
-      if (!owner.displayName) {
-        return {
-          ...owner,
-          displayName: owner.id === 'father' ? '父亲' : 
-                      owner.id === 'mother' ? '母亲' : 
-                      owner.name
-        };
-      }
-      return owner;
-    });
-    
-    // Save back with display names if we updated them
-    if (JSON.stringify(ownersData.owners) !== JSON.stringify(updatedOwners)) {
-      fs.writeFileSync(
-        ownersPath,
-        JSON.stringify({ owners: updatedOwners }, null, 2),
-        'utf-8'
-      );
-    }
-    
-    return NextResponse.json({ owners: updatedOwners });
+    return NextResponse.json(ownersData);
   } catch (error) {
     console.error('Error loading owners:', error);
     return NextResponse.json(
