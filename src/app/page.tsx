@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, TrendingUp, DollarSign, Upload, List } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar, Upload, List, TrendingUp, DollarSign } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import dynamic from 'next/dynamic';
 
-interface YearData {
-  years: number[];
-}
+// Dynamically import the FinancialOverview component with no SSR
+const FinancialOverview = dynamic(
+  () => import('@/components/FinancialOverview'),
+  { ssr: false }
+);
 
 export default function Home() {
   const [years, setYears] = useState<number[]>([]);
@@ -14,22 +19,22 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    fetch('/api/years')
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
+    const fetchYears = async () => {
+      try {
+        const response = await fetch('/api/years');
+        if (!response.ok) {
+          throw new Error('Failed to fetch years');
         }
-        return res.json();
-      })
-      .then(data => {
-        setYears(data.years || []);
+        const data = await response.json();
+        setYears(data.years);
+      } catch (error) {
+        console.error('Error loading years:', error);
+      } finally {
         setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to fetch years:', err);
-        setYears([]);
-        setLoading(false);
-      });
+      }
+    };
+
+    fetchYears();
   }, []);
 
   if (loading) {
@@ -44,90 +49,105 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            财务数据统计
-          </h1>
-          <p className="text-xl text-gray-600 mb-6">
-            查看您的年度和月度财务统计
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">个人财务概览</h1>
+          <p className="text-gray-600">查看和管理您的财务数据</p>
+        </header>
+
+        {/* Financial Overview Section */}
+        <section className="mb-12">
+          <FinancialOverview />
+        </section>
+
+        {/* Years Grid */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">
+              年度数据概览
+            </h2>
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <span>共 {years.length} 年数据</span>
+              <span className="h-1 w-1 rounded-full bg-gray-400"></span>
+              <span>最后更新: {new Date().toLocaleDateString('zh-CN')}</span>
+            </div>
+          </div>
           
-          <div className="flex flex-wrap gap-4 justify-center">
-            <button
-              onClick={() => router.push('/import')}
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Upload className="h-5 w-5 mr-2" />
-              导入账单文件
-            </button>
-            <button
-              onClick={() => router.push('/category-management')}
-              className="inline-flex items-center px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <List className="h-5 w-5 mr-2" />
-              分类管理
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {years.map(year => (
-            <div
-              key={year}
-              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer transform hover:-translate-y-1"
-              onClick={() => router.push(`/year/${year}`)}
-            >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Calendar className="h-6 w-6 text-blue-600" />
+          {years.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {years.map(year => (
+                <div
+                  key={year}
+                  className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden border border-gray-100 hover:border-blue-100"
+                  onClick={() => router.push(`/year/${year}`)}
+                >
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-5">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2.5 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors">
+                          <Calendar className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900">
+                          {year}年
+                        </h2>
+                      </div>
+                      <div className="flex items-center space-x-1 text-sm font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
+                        <TrendingUp className="h-4 w-4" />
+                        <span>查看</span>
+                      </div>
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900">
-                      {year}年
-                    </h2>
-                  </div>
-                  <TrendingUp className="h-6 w-6 text-green-600" />
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <DollarSign className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-600">年度统计</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-600">月度详情</span>
-                  </div>
-                </div>
+                    
+                    <div className="space-y-3.5 mb-5">
+                      <div className="flex items-center space-x-2.5 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="p-1.5 bg-blue-50 rounded-lg">
+                          <DollarSign className="h-4 w-4 text-blue-500" />
+                        </div>
+                        <span className="text-sm text-gray-600">年度统计</span>
+                      </div>
+                      <div className="flex items-center space-x-2.5 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="p-1.5 bg-purple-50 rounded-lg">
+                          <Calendar className="h-4 w-4 text-purple-500" />
+                        </div>
+                        <span className="text-sm text-gray-600">月度详情</span>
+                      </div>
+                    </div>
 
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <span className="text-sm text-blue-600 font-medium group-hover:text-blue-800">
-                    点击查看详情 →
-                  </span>
+                    <div className="pt-4 border-t border-gray-100">
+                      <div className="flex items-center text-sm font-medium text-blue-600 group-hover:text-blue-700 transition-colors">
+                        <span>查看详细数据</span>
+                        <svg className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 max-w-md mx-auto">
+                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-yellow-100 rounded-2xl">
+                  <Calendar className="h-8 w-8 text-yellow-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                  暂无数据
+                </h3>
+                <p className="text-yellow-700 text-sm mb-4">
+                  请确保 data 目录中有可用的 CSV 文件
+                </p>
+                <button 
+                  onClick={() => router.push('/import')}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                >
+                  导入数据
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-
-        {years.length === 0 && (
-          <div className="text-center py-12">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-              <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-yellow-100 rounded-full">
-                <Calendar className="h-6 w-6 text-yellow-600" />
-              </div>
-              <h3 className="text-lg font-medium text-yellow-800 mb-2">
-                暂无数据
-              </h3>
-              <p className="text-yellow-700">
-                请确保 data 目录中有可用的 CSV 文件
-              </p>
-            </div>
-          </div>
-        )}
+          )}
+        </section>
       </div>
     </div>
   );

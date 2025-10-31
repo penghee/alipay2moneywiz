@@ -27,6 +27,7 @@ export interface MonthlyStats {
   expense: number;
   balance: number;
   expenses: Expense[];
+  salary: Expense[];
   categoryStats: Record<string, CategoryStats>;
   totalTransactions: number;
 }
@@ -117,7 +118,8 @@ export function calculateMonthlyStats(year: number, month: number, ownerId?: str
   let expense = 0;
   const categoryStats: Record<string, CategoryStats> = {};
   const expenses: Expense[] = [];
-
+  const salary: Expense[] = [];
+  
   transactions.forEach((t, index) => {
     // Skip transactions that don't match the owner filter
     if (ownerId) {
@@ -127,8 +129,19 @@ export function calculateMonthlyStats(year: number, month: number, ownerId?: str
       }
     }
     
-    const amount = parseFloat(t["金额"]);
-    const category = t["分类"];
+    const amount = parseFloat(t.金额);
+    const category = t.分类;
+    
+    // Add salary transactions to salary array (positive amount for income)
+    if (['工资', 'salary'].includes(category) && amount > 0) {
+      salary.push({
+        id: `${year}-${String(month).padStart(2, '0')}-salary-${index}`,
+        amount: amount,
+        category: category,
+        date: t.日期,
+        description: t.描述 || t.交易对方 || '工资收入'
+      });
+    }
 
     if (amount > 0) {
       income += amount;
@@ -163,7 +176,8 @@ export function calculateMonthlyStats(year: number, month: number, ownerId?: str
     balance: income - expense,
     categoryStats,
     totalTransactions: transactions.length,
-    expenses
+    expenses,
+    salary
   };
 }
 

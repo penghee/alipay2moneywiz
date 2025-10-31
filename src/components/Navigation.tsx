@@ -44,6 +44,12 @@ export default function Navigation() {
             >
               导入
             </Link>
+            <Link 
+              href="/category-management"
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors"
+            >
+              分类管理
+            </Link>
           </div>
         </div>
       </div>
