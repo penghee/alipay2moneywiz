@@ -280,6 +280,56 @@ export function calculateYearlyStats(year: number, ownerId?: string): YearlyStat
 }
 
 // 获取可用的年份列表
+// 查找最近一次的工资收入
+export function findLatestSalary(ownerId?: string): { amount: number; date: string; category: string } | null {
+  try {
+    // 获取所有可用的年份，按降序排列
+    const years = getAvailableYears();
+    
+    // 按从新到旧的顺序检查每年的数据
+    for (const year of years) {
+      const dataDir = getYearDataDirectory(year);
+      const files = readdirSync(dataDir)
+        .filter(f => f.endsWith('.csv'))
+        .sort((a, b) => b.localeCompare(a)); // 从新到旧排序
+      
+      for (const file of files) {
+        const month = parseInt(file.replace('.csv', ''));
+        const filePath = path.join(dataDir, file);
+        const transactions = readCSV(filePath);
+        
+        // 查找工资收入（正数且分类为'工资'）
+        const salaryTx = transactions.find(t => {
+          // 检查所有者过滤
+          if (ownerId && ownerId !== 'all') {
+            const ownerName = getOwnerName(ownerId);
+            if (t.owner !== ownerName && t['账单人'] !== ownerName) {
+              return false;
+            }
+          }
+          
+          const amount = parseFloat(t['金额']);
+          const category = t['分类'];
+          return amount > 0 && (category === '工资' || category === 'salary');
+        });
+        
+        if (salaryTx) {
+          return {
+            amount: parseFloat(salaryTx['金额']),
+            date: salaryTx['日期'],
+            category: salaryTx['分类']
+          };
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('查找工资收入时出错:', error);
+    return null;
+  }
+}
+
 export function getAvailableYears(): number[] {
   const dataDir = getDataDirectory();
   

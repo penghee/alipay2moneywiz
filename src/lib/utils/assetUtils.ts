@@ -140,7 +140,7 @@ export function saveAssets(assets: Asset[]): void {
       asset.amount,
       asset.rate ?? '',
       asset.note ?? '',
-      asset.ownerId
+      asset.owner
     ];
 
     // Format the row with proper CSV escaping

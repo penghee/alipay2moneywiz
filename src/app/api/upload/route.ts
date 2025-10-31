@@ -242,7 +242,7 @@ function saveData(transactions: Record<string, string>[], year: number, month: n
   
   // 构建文件路径
   const monthStr = month.toString().padStart(2, '0');
-  const filename = `${year}${monthStr}_${platform}.csv`;
+  const filename = `${year}${monthStr}_${platform}_${Math.random().toString(36).substring(2, 8)}.csv`;
   
   // 确保每条记录都有账单人
   transactions = transactions.map(transaction => {

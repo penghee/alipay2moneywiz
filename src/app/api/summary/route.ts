@@ -16,6 +16,10 @@ interface SummaryResponse {
   totalAssets: number;
   totalLiabilities: number;
   netWorth: number;
+  investmentAssets: number;
+  cashAssets: number; // New field for cash and cash equivalents
+  creditCardDebt: number; // New field for credit card debt
+  annualExpenses: number; // This will be used for financial freedom calculation
   sankeyData: {
     nodes: SankeyNode[];
     links: SankeyLink[];
@@ -26,10 +30,15 @@ export async function GET(): Promise<NextResponse<SummaryResponse | { error: str
   try {
     // Load assets directly from the file
     const assets = loadAssets();
-        
+    console.log('assets', assets);
     // Calculate summary data
+    // Calculate total assets and investment assets
     const totalAssets = assets
       .filter((asset: Asset) => asset.type !== 'liability')
+      .reduce((sum: number, asset: Asset) => sum + (Number(asset.amount) || 0), 0);
+      
+    const investmentAssets = assets
+      .filter((asset: Asset) => asset.category === '投资')
       .reduce((sum: number, asset: Asset) => sum + (Number(asset.amount) || 0), 0);
       
     const totalLiabilities = assets
@@ -37,6 +46,24 @@ export async function GET(): Promise<NextResponse<SummaryResponse | { error: str
       .reduce((sum: number, asset: Asset) => sum + (Number(asset.amount) || 0), 0);
       
     const netWorth = totalAssets - totalLiabilities;
+    
+    // Calculate cash assets (cash, 活期, 货基)
+    const cashAssets = assets
+      .filter((asset: Asset) => 
+        asset.category?.toLowerCase().includes('活期')
+      )
+      .reduce((sum: number, asset: Asset) => sum + (Number(asset.amount) || 0), 0);
+      
+    // Calculate credit card debt
+    const creditCardDebt = assets
+      .filter((asset: Asset) => 
+        asset.subcategory?.includes('信用卡')
+      )
+      .reduce((sum: number, asset: Asset) => sum + (Number(asset.amount) || 0), 0);
+    
+    // For demonstration, using a fixed annual expenses value
+    // In a real app, this should come from user settings or expense tracking
+    const annualExpenses = 240000; // Example: 20,000 per month * 12
     
     // Prepare Sankey data
     const categories = Array.from(new Set(assets
@@ -94,9 +121,13 @@ export async function GET(): Promise<NextResponse<SummaryResponse | { error: str
       totalAssets,
       totalLiabilities,
       netWorth,
+      investmentAssets,
+      creditCardDebt,
+      cashAssets,
+      annualExpenses,
       sankeyData: {
-        nodes,
-        links: links.filter(link => link.value > 0), // Only include non-zero links
+        nodes: nodes.map(node => ({ name: node.name })),
+        links,
       },
     });
     

@@ -40,4 +40,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 data
-assets
+assets/
+!src/app/api/assets

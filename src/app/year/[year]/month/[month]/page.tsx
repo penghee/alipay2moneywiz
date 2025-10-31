@@ -220,6 +220,21 @@ export default function MonthPage({ params }: { params: Promise<{ year: string; 
                 <p className={`text-2xl font-bold ${stats.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   ¥{formatMoney(stats.balance)}
                 </p>
+                {stats.income > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-500">储蓄率</p>
+                    <p className={`text-sm font-medium ${
+                      (stats.income - stats.expense) / stats.income < 0.1 ? 'text-red-600' : 
+                      (stats.income - stats.expense) / stats.income <= 0.2 ? 'text-yellow-600' : 'text-green-600'
+                    }`}>
+                      {((stats.income - stats.expense) / stats.income * 100).toFixed(1)}%
+                      <span className="text-xs ml-1 text-gray-500">
+                        {(stats.income - stats.expense) / stats.income < 0.1 ? ' (储蓄能力偏弱)' : 
+                         (stats.income - stats.expense) / stats.income <= 0.2 ? ' (健康区)' : ' (优秀区)'}
+                      </span>
+                    </p>
+                  </div>
+                )}
               </div>
               <DollarSign className="h-8 w-8 text-blue-600" />
             </div>

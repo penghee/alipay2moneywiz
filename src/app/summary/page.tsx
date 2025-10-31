@@ -21,6 +21,8 @@ interface SummaryData {
   totalAssets: number;
   totalLiabilities: number;
   netWorth: number;
+  investmentAssets: number;
+  annualExpenses: number;
   sankeyData: {
     nodes: SankeyNode[];
     links: SankeyLink[];
@@ -52,25 +54,48 @@ const SankeyChart = dynamic(
 
 export default function SummaryPage() {
   const [data, setData] = useState<SummaryData | null>(null);
+  const [debtServiceRatio, setDebtServiceRatio] = useState<number | null>(null);
+  const [latestIncome, setLatestIncome] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchSummaryData = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/summary');
-        if (!response.ok) throw new Error('获取汇总数据失败');
-        const result = await response.json();
-        setData(result);
+        setLoading(true);
+        const [summaryRes, incomeRes] = await Promise.all([
+          fetch('/api/summary'),
+          fetch('/api/income/latest')
+        ]);
+        
+        if (!summaryRes.ok) throw new Error('Failed to fetch summary data');
+        if (!incomeRes.ok) throw new Error('Failed to fetch income data');
+        
+        const [summaryData, incomeData] = await Promise.all([
+          summaryRes.json(),
+          incomeRes.json()
+        ]);
+        
+        setData(summaryData);
+        
+        // Calculate debt service ratio if we have credit card debt and income
+        const creditCardDebt = summaryData.creditCardDebt || 0;
+        const monthlyIncome = incomeData.data.amount || 0;
+        
+        setLatestIncome(monthlyIncome);
+        
+        if (monthlyIncome > 0) {
+          const ratio = creditCardDebt / monthlyIncome;
+          setDebtServiceRatio(ratio);
+        }
       } catch (err) {
-        console.error('Error fetching summary data:', err);
-        setError(err instanceof Error ? err.message : '加载数据失败');
+        setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSummaryData();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -212,7 +237,7 @@ export default function SummaryPage() {
                 {formatCurrency(data.totalAssets)}
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                较上月 <span className="text-green-600 font-medium">+2.5%</span>
+                {/* 较上月 <span className="text-green-600 font-medium">+2.5%</span> */}
               </p>
             </CardContent>
           </Card>
@@ -232,7 +257,7 @@ export default function SummaryPage() {
                 {formatCurrency(data.netWorth)}
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                较上月 <span className="text-green-600 font-medium">+3.2%</span>
+                {/* 较上月 <span className="text-green-600 font-medium">+3.2%</span> */}
               </p>
             </CardContent>
           </Card>
@@ -251,9 +276,141 @@ export default function SummaryPage() {
               <div className="text-2xl font-bold text-gray-900">
                 {formatCurrency(data.totalLiabilities)}
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                较上月 <span className="text-red-600 font-medium">+1.2%</span>
-              </p>
+              {debtServiceRatio !== null && latestIncome && latestIncome > 0 && (
+                <div className="mt-2">
+                  <p>最新收入: {formatCurrency(latestIncome)}</p>
+                  <p className="text-sm font-medium">
+                    信用卡负债率: {' '}
+                    <span className={
+                      debtServiceRatio < 0.3 ? 'text-green-600' :
+                      debtServiceRatio <= 0.4 ? 'text-yellow-600' : 'text-red-600'
+                    }>
+                      {(debtServiceRatio * 100).toFixed(1)}%
+                    </span>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {debtServiceRatio < 0.3 ? '轻松区' :
+                     debtServiceRatio <= 0.4 ? '警戒区，申请新贷款较困难' :
+                     '危险区，影响生活质量'}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Financial Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 投资资产比率 */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow border-l-4 border-purple-500">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-gray-500">投资资产比率</CardTitle>
+                <div className="p-2 rounded-full bg-purple-100">
+                  <svg className="h-4 w-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-900">
+                {data.totalAssets > 0 ? ((data.investmentAssets / data.totalAssets * 100).toFixed(1) + '%') : 'N/A'}
+              </div>
+              <div className="mt-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-purple-600 h-2 rounded-full" 
+                    style={{ width: `${data.totalAssets > 0 ? Math.min(100, (data.investmentAssets / data.totalAssets * 100)) : 0}%` }}
+                  ></div>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  {data.investmentAssets / data.totalAssets >= 0.5 ? '健康' : '待优化'}
+                  {data.totalAssets > 0 && (
+                    <span className="ml-2">
+                      (目标 ≥50%)
+                    </span>
+                  )}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 资产负债率 */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow border-l-4 border-rose-500">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-gray-500">资产负债率</CardTitle>
+                <div className="p-2 rounded-full bg-rose-100">
+                  <svg className="h-4 w-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-900">
+                {data.totalAssets > 0 ? ((data.totalLiabilities / data.totalAssets * 100).toFixed(1) + '%') : 'N/A'}
+              </div>
+              <div className="mt-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full ${
+                      (data.totalLiabilities / data.totalAssets) < 0.3 ? 'bg-green-500' : 
+                      (data.totalLiabilities / data.totalAssets) < 0.6 ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${data.totalAssets > 0 ? Math.min(100, (data.totalLiabilities / data.totalAssets * 100)) : 0}%` }}
+                  ></div>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  {data.totalAssets > 0 && (
+                    <>
+                      {data.totalLiabilities / data.totalAssets < 0.3 ? '安全区' : 
+                       data.totalLiabilities / data.totalAssets < 0.6 ? '观察区' : '危险区'}
+                      <span className="ml-2">
+                        (目标 &lt;30%)
+                      </span>
+                    </>
+                  )}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 财务自由度 */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow border-l-4 border-emerald-500">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-gray-500">财务自由度</CardTitle>
+                <div className="p-2 rounded-full bg-emerald-100">
+                  <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-900">
+                {data.annualExpenses > 0 ? ((data.investmentAssets * 0.08 / data.annualExpenses * 100).toFixed(1) + '%') : 'N/A'}
+              </div>
+              <div className="mt-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-emerald-500 h-2 rounded-full" 
+                    style={{ width: `${data.annualExpenses > 0 ? Math.min(100, (data.investmentAssets * 0.08 / data.annualExpenses * 100)) : 0}%` }}
+                  ></div>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  {data.annualExpenses > 0 && (
+                    <>
+                      {data.investmentAssets * 0.08 / data.annualExpenses >= 1 ? '财务自由' : '努力中'}
+                      <span className="ml-2">
+                        (目标 100%)
+                      </span>
+                    </>
+                  )}
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -58,6 +58,8 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
   const [budgetUsed, setBudgetUsed] = useState<number>(0);
   const [totalBudget, setTotalBudget] = useState<number>(0);
   const [selectedOwner, setSelectedOwner] = useState<string>('all');
+  const [cashAssets, setCashAssets] = useState<number>(0);
+  const [liquidityRatio, setLiquidityRatio] = useState<number>(0);
   const router = useRouter();
 
   const owners = useMemo(() => [
@@ -129,6 +131,50 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
       maximumFractionDigits: 2
     }).format(amount);
   };
+  // Calculate averages
+  const averageMonthlyExpense = useMemo(() => {
+    if (!stats) return 0;
+    return stats.totalExpense / stats.monthlyData.length;
+  }, [stats]);
+
+  const averageMonthlyIncome = stats ? Math.round((stats.totalIncome / stats.monthlyData.length) * 100) / 100 : 0;
+
+  // Calculate average monthly expense per category
+  const averageCategoryExpenses = stats ? Object.entries(stats.categoryStats)
+    .map(([category, data]) => ({
+      category,
+      average: Math.round((data.amount / stats.monthlyData.length) * 100) / 100,
+      total: data.amount,
+      count: data.count,
+      percentage: Math.round((data.amount / stats.totalExpense) * 100) || 0
+    }))
+    .sort((a, b) => b.average - a.average) : [];
+
+  // Calculate liquidity ratio
+  useEffect(() => {
+    const fetchLiquidityRatio = async () => {
+      try {
+        const response = await fetch('/api/summary');
+        if (response.ok) {
+          const data = await response.json();
+          // Use the pre-calculated cashAssets from the API
+          const cashAssets = data.cashAssets || 0;
+          setCashAssets(cashAssets);
+          // Calculate ratio (months of coverage)
+          const currentAvgExpense = averageMonthlyExpense;
+          if (currentAvgExpense > 0) {
+            setLiquidityRatio(cashAssets / currentAvgExpense);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching liquidity data:', error);
+      }
+    };
+
+    if (averageMonthlyExpense > 0) {
+      fetchLiquidityRatio();
+    }
+  }, [averageMonthlyExpense]);
 
   if (loading) {
     return (
@@ -166,28 +212,16 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
   }));
 
   // 准备分类饼图数据
-  const pieData = Object.entries(stats.categoryStats)
+  const pieData = stats ? Object.entries(stats.categoryStats)
     .map(([category, data]) => ({
       name: category,
       value: data.amount,
-      count: data.count
-    }))
-    .sort((a, b) => b.value - a.value);
-
-  // Calculate average monthly expense
-  const averageMonthlyExpense = stats ? Math.round((stats.totalExpense / stats.monthlyData.length) * 100) / 100 : 0;
-  const averageMonthlyIncome = stats ? Math.round((stats.totalIncome / stats.monthlyData.length) * 100) / 100 : 0;
-
-  // Calculate average monthly expense per category
-  const averageCategoryExpenses = stats ? Object.entries(stats.categoryStats)
-    .map(([category, data]) => ({
-      category,
+      count: data.count,
       average: Math.round((data.amount / stats.monthlyData.length) * 100) / 100,
       total: data.amount,
-      count: data.count,
       percentage: Math.round((data.amount / stats.totalExpense) * 100) || 0
     }))
-    .sort((a, b) => b.average - a.average) : [];
+    .sort((a, b) => b.value - a.value) : [];
 
   // 颜色配置
   const COLORS = [
@@ -270,6 +304,20 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
                   {/* 结余比率 */}
                   结余比率 {((stats.totalBalance / stats.totalIncome) * 100).toFixed(2)}%
                 </p>
+                {stats.totalIncome > 0 && (
+                  <div className="mt-2">
+                    <p className={`text-sm font-medium ${
+                      (stats.totalIncome - stats.totalExpense) / stats.totalIncome < 0.1 ? 'text-red-600' : 
+                      (stats.totalIncome - stats.totalExpense) / stats.totalIncome <= 0.2 ? 'text-yellow-600' : 'text-green-600'
+                    }`}>
+                      {((stats.totalIncome - stats.totalExpense) / stats.totalIncome * 100).toFixed(1)}%
+                      <span className="text-xs ml-1 text-gray-500">
+                        {(stats.totalIncome - stats.totalExpense) / stats.totalIncome < 0.1 ? ' (储蓄能力偏弱)' : 
+                         (stats.totalIncome - stats.totalExpense) / stats.totalIncome <= 0.2 ? ' (健康区)' : ' (优秀区)'}
+                      </span>
+                    </p>
+                  </div>
+                )}
               </div>
               <DollarSign className="h-8 w-8 text-blue-600" />
             </div>
@@ -286,6 +334,30 @@ export default function YearPage({ params }: { params: Promise<{ year: string }>
                 <p className="text-xs text-gray-500 mt-1">
                   共 {stats.monthlyData.length} 个月数据
                 </p>
+                {averageMonthlyExpense > 0 && (
+                  <div className="mt-2 pt-2 border-t border-gray-100">
+                    <div className="flex items-center">
+                      <p className="text-xs font-medium text-gray-600">流动性覆盖率</p>
+                      <div className="ml-1 group relative">
+                        <span className="text-xs text-gray-400 cursor-help">ⓘ</span>
+                        <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 text-xs text-gray-700 bg-white rounded shadow-lg border border-gray-200 z-10">
+                          流动性资产 / 月均支出 (安全垫)<br/>
+                          3-6个月为健康区间，表示您的应急资金可以支撑3-6个月的正常生活。
+                        </div>
+                      </div>
+                    </div>
+                    <p className={`text-sm font-medium ${
+                      liquidityRatio < 3 ? 'text-red-600' : 
+                      liquidityRatio <= 6 ? 'text-yellow-600' : 'text-green-600'
+                    }`}>
+                      {liquidityRatio.toFixed(1)} 个月(¥{formatMoney(cashAssets)})
+                      <span className="text-xs ml-1 text-gray-500">
+                        {liquidityRatio < 3 ? ' (需增加应急储备)' : 
+                         liquidityRatio <= 6 ? ' (健康)' : ' (充足)'}
+                      </span>
+                    </p>
+                  </div>
+                )}
               </div>
               <BarChart3 className="h-8 w-8 text-purple-600" />
             </div>
