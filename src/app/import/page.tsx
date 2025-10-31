@@ -159,7 +159,7 @@ export default function ImportPage() {
                   <div>
                     <p className="text-sm text-gray-600">存储位置</p>
                     <p className="text-sm font-medium text-gray-900 truncate">
-                      {result.outputPath.split('/').pop()}
+                      {result.outputPath?.split('/').pop()}
                     </p>
                   </div>
                 </div>

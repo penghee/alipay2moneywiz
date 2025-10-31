@@ -6,6 +6,9 @@ import path from 'path';
 import * as XLSX from 'xlsx';
 import iconv from 'iconv-lite';
 import { DATA_PATHS } from '@/config/paths';
+import * as fsp from "fs/promises";
+import * as fs from "fs";
+import readline from 'readline';
 export const dynamic = 'force-dynamic'; // Prevent static generation
 
 // 读取映射文件
@@ -62,24 +65,35 @@ function mapCategory(
 }
 
 // 处理支付宝账单
-function processAlipay(content: string, accountMap: Record<string, string>, categoryMap: Record<string, string[]>, owner: string) {
+async function processAlipay(content: File, accountMap: Record<string, string>, categoryMap: Record<string, string[]>, owner: string) {
   // 支付宝 CSV 文件前面有元数据，需要提取真实的交易数据
-  const lines = content.split('\n');
-  let realContent = '';
+  // transfer GBK to utf-8
+  // Convert the File to an ArrayBuffer
+  const arrayBuffer = await content.arrayBuffer();
+  // Convert ArrayBuffer to Buffer
+  const buffer = Buffer.from(arrayBuffer);
+  let str = iconv.decode(buffer, "GBK");
+  await fsp.writeFile("temp_res", str);
+  // read line by line
+  const fileStream = fs.createReadStream("temp_res");
+  const rl = readline.createInterface({
+    input: fileStream,
+  });
+  // remove unused line of csv
+  let realContent = "";
   let belowAreRealContent = false;
-  
-  for (let line of lines) {
-    if (line.startsWith('--')) {
-      belowAreRealContent = line.includes('支付宝');
+  for await (let input of rl) {
+    if (input.startsWith("--")) {
+      belowAreRealContent = input.includes("支付宝");
     } else if (belowAreRealContent) {
-      // 移除行尾的逗号
-      if (line.endsWith(',')) {
-        line = line.substring(0, line.length - 1);
+      // remove the last ',' of the line
+      if (input.endsWith(",")) {
+        input = input.substring(0, input.length - 1);
       }
-      realContent += line + '\n';
+      realContent += input + "\n";
     }
   }
-  
+  await fsp.unlink("temp_res"); //delete the temp file
   const records = parse(realContent, {
     delimiter: ',',
     columns: true,
@@ -345,21 +359,23 @@ export async function POST(request: NextRequest) {
     const { accountMap, categoryMap } = loadMaps();
 
     let transactions: Record<string, string>[] = [];
-
+    let outputPath = null;
     if (platform === 'alipay') {
       // 处理支付宝 CSV 文件
       console.log('Processing Alipay CSV file...');
       const content = await file.text();
       console.log('File content length:', content.length);
-      const { transactions, year, month } = processAlipay(content, accountMap, categoryMap, owner);
-      saveData(transactions, year, month, 'alipay', owner);
+      const { transactions: alipayTransactions, year, month } = await processAlipay(file, accountMap, categoryMap, owner);
+      outputPath = saveData(alipayTransactions, year, month, 'alipay', owner);
+      transactions = [...transactions, ...alipayTransactions];
     } else if (platform === 'wechat') {
       // 处理微信 XLSX 文件
       console.log('Processing Wechat XLSX file...');
       const buffer = Buffer.from(await file.arrayBuffer());
       console.log('File buffer length:', buffer.length);
-      const { transactions, year, month } = processWechat(buffer, accountMap, categoryMap, owner);
-      saveData(transactions, year, month, 'wechat', owner);
+      const { transactions: wechatTransactions, year, month } = processWechat(buffer, accountMap, categoryMap, owner);
+      outputPath = saveData(wechatTransactions, year, month, 'wechat', owner);
+      transactions = [...transactions, ...wechatTransactions];
     }
 
     if (transactions.length === 0) {
@@ -374,16 +390,13 @@ export async function POST(request: NextRequest) {
     const year = firstDate.getFullYear();
     const month = firstDate.getMonth() + 1;
 
-    // 保存数据
-    const outputPath = saveData(transactions, year, month, platform, owner);
-
     return NextResponse.json({
       success: true,
       message: `成功导入 ${transactions.length} 条记录`,
       records: transactions.length,
       year,
       month,
-      outputPath,
+      outputPath: outputPath?.filepath || '',
     });
 
   } catch (error) {
