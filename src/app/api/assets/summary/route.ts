@@ -25,20 +25,20 @@ export async function GET() {
       summary.byCategory[categoryKey].amount += amount;
 
       // Update owner summary
-      if (!summary.byOwner[asset.ownerId]) {
-        summary.byOwner[asset.ownerId] = { assets: 0, liabilities: 0, netWorth: 0 };
+      if (!summary.byOwner[asset.owner]) {
+        summary.byOwner[asset.owner] = { assets: 0, liabilities: 0, netWorth: 0 };
       }
       
       if (asset.type === 'liability') {
-        summary.byOwner[asset.ownerId].liabilities += amount;
+        summary.byOwner[asset.owner].liabilities += amount;
         summary.totalLiabilities += amount;
       } else {
-        summary.byOwner[asset.ownerId].assets += amount;
+        summary.byOwner[asset.owner].assets += amount;
         summary.totalAssets += amount;
       }
       
-      summary.byOwner[asset.ownerId].netWorth = 
-        summary.byOwner[asset.ownerId].assets - summary.byOwner[asset.ownerId].liabilities;
+      summary.byOwner[asset.owner].netWorth = 
+        summary.byOwner[asset.owner].assets - summary.byOwner[asset.owner].liabilities;
     });
 
     // Calculate percentages

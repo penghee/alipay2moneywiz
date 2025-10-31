@@ -33,7 +33,10 @@ export default function ImportPage() {
       try {
         // Use dynamic import for the JSON file
         const billOwnersData = await import('@/config/bill_owners.json');
-        setBillOwners(billOwnersData);
+        setBillOwners({
+          defaultOwner: billOwnersData.owners[0]?.id || 'father', // Fallback to 'father' if no owners
+          owners: billOwnersData.owners
+        });
       } catch (error) {
         console.error('Failed to load bill owners:', error);
         // Fallback to default values if loading fails

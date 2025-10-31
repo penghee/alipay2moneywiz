@@ -168,7 +168,12 @@ export default function FinancialOverview() {
               <LabelList 
                 dataKey="balance" 
                 position="top" 
-                formatter={(value: number) => (value >= 0 ? '¥' + value.toLocaleString() : '-¥' + Math.abs(value).toLocaleString())}
+                formatter={(value) => {
+                  const numValue = Number(value);
+                  return numValue >= 0 
+                    ? '¥' + numValue.toLocaleString() 
+                    : '-¥' + Math.abs(numValue).toLocaleString();
+                }}
                 style={{ fill: '#666', fontSize: '0.75rem' }}
               />
             </Bar>

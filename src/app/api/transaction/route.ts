@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       `"${transaction.note || ''}"`,
       `"${transaction.tags || ''}"`,
       transaction.amount,
-      `"${transaction.owner || billOwners.defaultOwner}"`
+      `"${transaction.owner || ''}"`
     ];
     
     // 添加到CSV内容
