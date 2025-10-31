@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Asset } from '@/lib/types/asset';
+import { Asset, ASSET_TYPES } from '@/lib/types/asset';
 import { ASSETS_PATH } from '@/config/paths';
 
 export function loadAssets(): Asset[] {
@@ -11,9 +11,11 @@ export function loadAssets(): Asset[] {
 
   try {
     const csvData = fs.readFileSync(ASSETS_PATH, 'utf-8');
-    const lines = csvData.split(/\r?\n/).filter(line => line.trim() !== '');
+    // Split lines and remove empty lines
+    const lines = csvData.split(/\r?\n/).map(line => line.trim()).filter(line => line);
     if (lines.length <= 1) return [];
 
+    // Process headers
     const headers = lines[0].split(',').map(h => h.trim());
     const headerMap: Record<string, string> = {
       '资产/负债': 'type',
@@ -25,25 +27,48 @@ export function loadAssets(): Asset[] {
       '金额': 'amount',
       '利率%': 'rate',
       '备注': 'note',
-      '资产对象': 'ownerId'
+      '资产对象': 'owner'
     };
 
+    // Process data lines
     return lines.slice(1).flatMap((line, index) => {
       if (!line.trim()) return [];
       
-      const values = line.match(/(?:[^,"]|"[^"]*")+/g)?.map(v => v.replace(/^"|"$/g, '').trim()) || [];
+      // Improved CSV parsing that handles Chinese characters and commas
+      const values: string[] = [];
+      let inQuotes = false;
+      let currentValue = '';
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          values.push(currentValue.trim());
+          currentValue = '';
+        } else {
+          currentValue += char;
+        }
+      }
+      // Add the last value
+      values.push(currentValue.trim());
+      
       if (values.length !== headers.length) {
         console.warn(`Skipping malformed line ${index + 2}:`, line);
+        console.warn('Expected', headers.length, 'columns but got', values.length);
+        console.warn('Values:', values);
         return [];
       }
 
       const entry: Record<string, string> = {};
       headers.forEach((header, i) => {
         const key = headerMap[header as keyof typeof headerMap] || header;
-        entry[key] = values[i] || '';
+        entry[key] = (values[i] || '').replace(/^"|"$/g, '').trim();
       });
 
-      const cleanAmount = entry.amount.replace(/,/g, '');
+      // Clean and parse amount
+      const cleanAmount = (entry.amount || '').replace(/[^0-9.-]+/g, '');
       const amount = parseFloat(cleanAmount) || 0;
       
       if (isNaN(amount)) {
@@ -51,18 +76,30 @@ export function loadAssets(): Asset[] {
         return [];
       }
 
+      // Map Chinese type to internal type
+      const typeMap: Record<string, keyof typeof ASSET_TYPES> = {
+        '活期': 'cash',
+        '投资': 'investment',
+        '固定资产': 'fixed_asset',
+        '应收': 'receivable',
+        '负债': 'liability'
+      };
+      
+      const assetType = typeMap[entry.type as keyof typeof typeMap] || 'cash';
+      
       return [{
-        id: `asset-${index}`,
-        type: entry.type === '负债' ? 'liability' : 'cash',
+        id: `asset-${Date.now()}-${index}`,
+        type: assetType as 'cash' | 'investment' | 'fixed_asset' | 'receivable' | 'liability',
+        typeDisplay: entry.type,
         category: entry.category,
         subcategory: entry.subcategory,
         name: entry.name,
         account: entry.account,
-        amount: amount,
+        amount,
         rate: entry.rate ? parseFloat(entry.rate) : undefined,
         note: entry.note,
-        ownerId: entry.ownerId,
-        date: entry.date
+        owner: entry.owner,
+        date: entry.date || new Date().toISOString().split('T')[0],
       }];
     });
   } catch (error) {

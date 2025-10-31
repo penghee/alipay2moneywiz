@@ -26,10 +26,7 @@ export async function GET(): Promise<NextResponse<SummaryResponse | { error: str
   try {
     // Load assets directly from the file
     const assets = loadAssets();
-    
-    // Debug: Log the assets to check what we're working with
-    console.log('Assets in summary:', JSON.stringify(assets, null, 2));
-    
+        
     // Calculate summary data
     const totalAssets = assets
       .filter((asset: Asset) => asset.type !== 'liability')
@@ -57,10 +54,7 @@ export async function GET(): Promise<NextResponse<SummaryResponse | { error: str
       acc[node.name] = index;
       return acc;
     }, {});
-    
-    // Debug: Log the node map
-    console.log('Node map:', nodeMap);
-    
+        
     // Create links for assets to categories
     const assetLinks = assets
       .filter((asset: Asset) => asset.type !== 'liability' && asset.category)

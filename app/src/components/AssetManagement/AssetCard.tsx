@@ -48,8 +48,8 @@ export const AssetCard: React.FC<AssetCardProps> = ({
               <div className="font-medium">{item.name}</div>
               <div className="text-sm text-gray-500">{item.account}</div>
               <div className="text-xs text-gray-400">
-                {item.ownerId ? `所有人: ${item.ownerId}` : ''}
-                {item.note && item.ownerId ? ' • ' : ''}
+                {item.owner ? `所有人: ${item.owner}` : ''}
+                {item.note && item.owner ? ' • ' : ''}
                 {item.note}
               </div>
             </div>

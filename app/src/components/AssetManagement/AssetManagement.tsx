@@ -57,7 +57,14 @@ export const AssetManagement: React.FC = () => {
         setLoading(true);
         // Load assets
         const assetsData = await assetService.getAssets();
-        setAssets(assetsData);
+        // Ensure all assets have typeDisplay and proper owner
+        const processedAssets = assetsData.map((asset: Asset) => ({
+          ...asset,
+          typeDisplay: asset.typeDisplay || ASSET_TYPES[asset.type as keyof typeof ASSET_TYPES] || asset.type,
+          // Ensure owner is set, default to first owner if not provided
+          owner: asset.owner || owners[0]?.name || ''
+        }));
+        setAssets(processedAssets);
         
       } catch (err) {
         console.error('Error loading data:', err);
@@ -68,7 +75,7 @@ export const AssetManagement: React.FC = () => {
     };
     
     loadData();
-  }, [showAddModal]); // Reload data when modal is closed
+  }, [showAddModal, owners]); // Reload data when modal is closed or owners change
 
   // Group assets by type, category, and subcategory
   const groupedAssets = React.useMemo<GroupedAssets>(() => {
@@ -98,12 +105,53 @@ export const AssetManagement: React.FC = () => {
 
   const handleSaveAsset = async (assetData: Partial<Asset>) => {
     try {
+      // Map type to display name
+      const typeDisplay = ASSET_TYPES[assetData.type as keyof typeof ASSET_TYPES] || assetData.type;
+      
+      // For new assets, ensure we have the correct category and subcategory
+      const isNewAsset = !editingAsset;
+      let category = assetData.category;
+      let subcategory = assetData.subcategory;
+      
+      if (isNewAsset && assetData.type) {
+        // Map the type to the correct category name
+        const typeToCategoryMap: Record<string, string> = {
+          'cash': 'cash',
+          'investment': 'investment',
+          'fixed_asset': 'fixed_asset',
+          'receivable': 'receivable',
+          'liability': 'liability'
+        };
+        
+        // Update category based on type if not explicitly set
+        if (!category && typeToCategoryMap[assetData.type]) {
+          category = typeToCategoryMap[assetData.type];
+        }
+        
+        // If subcategory is a display name, find the corresponding value
+        if (category && subcategory) {
+          const categoryKey = category as keyof typeof ASSET_CATEGORIES;
+          const subcategories = ASSET_CATEGORIES[categoryKey] || [];
+          if (Array.isArray(subcategories) && !subcategories.includes(subcategory as any)) {
+            // If subcategory is not in the list, use the first one as default
+            subcategory = subcategories[0] || '';
+          }
+        }
+      }
+      
+      const dataToSave = {
+        ...assetData,
+        typeDisplay,
+        date: assetData.date || new Date().toISOString().split('T')[0],
+        owner: assetData.owner || owners[0]?.name || '',
+        category,
+        subcategory
+      };
+
       if (editingAsset) {
-        // Update existing asset
-        await assetService.updateAsset(editingAsset.id, assetData);
+        await assetService.updateAsset(editingAsset.id, dataToSave);
       } else {
-        // Add new asset
-        await assetService.addAsset(assetData as Omit<Asset, 'id'>);
+        await assetService.addAsset(dataToSave as Omit<Asset, 'id'>);
       }
       
       // Refresh assets
@@ -229,7 +277,7 @@ export const AssetManagement: React.FC = () => {
               subcategory={subcategory}
               items={assetsInSubcategory}
               owners={owners}
-              onEdit={setEditingAsset}
+              onEdit={handleEditClick}
               onDelete={handleDeleteAsset}
             />
           );
@@ -266,8 +314,38 @@ const AssetFormModal: React.FC<AssetFormModalProps> = ({
   onSave,
   onClose,
 }) => {
+  // Helper function to map type to its key in ASSET_TYPES
+  const getTypeKey = (typeValue: string | undefined): keyof typeof ASSET_TYPES => {
+    if (!typeValue) return 'cash';
+    
+    // First check if the value is a direct key
+    if (Object.keys(ASSET_TYPES).includes(typeValue)) {
+      return typeValue as keyof typeof ASSET_TYPES;
+    }
+    
+    // Then check if it's a display value
+    const entry = Object.entries(ASSET_TYPES).find(([_, value]) => value === typeValue);
+    if (entry) {
+      return entry[0] as keyof typeof ASSET_TYPES;
+    }
+    
+    // Default to 'cash' if no match found
+    return 'cash';
+  };
+  
+  // Handle owner selection change
+  const handleOwnerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      owner: e.target.value
+    }));
+  };
+
+  const isEditMode = !!asset;
+
   const [formData, setFormData] = useState<{
-    type: 'cash' | 'investment' | 'fixed_asset' | 'receivable' | 'liability';
+    type: keyof typeof ASSET_TYPES;
+    typeDisplay: string;
     category: string;
     subcategory: string;
     name: string;
@@ -275,11 +353,12 @@ const AssetFormModal: React.FC<AssetFormModalProps> = ({
     amount: number;
     rate?: number;
     note?: string;
-    ownerId: string;
+    owner: string;
   }>(() => {
-    // Initialize with default values
+    // Default values for new assets
     const defaultData = {
       type: 'cash' as const,
+      typeDisplay: ASSET_TYPES.cash,
       category: 'asset',
       subcategory: '',
       name: '',
@@ -287,24 +366,35 @@ const AssetFormModal: React.FC<AssetFormModalProps> = ({
       amount: 0,
       rate: undefined,
       note: '',
-      ownerId: owners[0]?.id || '',
+      owner: owners[0]?.name || '',
     };
 
     if (!asset) return defaultData;
 
-    // For existing asset, ensure all fields are set correctly
+    // For existing asset, map the type correctly
+    let mappedType: keyof typeof ASSET_TYPES = 'cash';
+    
+    // First check if the asset type is a valid key
+    if (asset.type in ASSET_TYPES) {
+      mappedType = asset.type as keyof typeof ASSET_TYPES;
+    } else {
+      // If not, try to find the key by value
+      const typeEntry = Object.entries(ASSET_TYPES).find(([_, value]) => value === asset.type);
+      if (typeEntry) {
+        mappedType = typeEntry[0] as keyof typeof ASSET_TYPES;
+      }
+    }
+
+    const isLiability = mappedType === 'liability' || asset.category === 'liability';
+    const typeDisplay = asset.typeDisplay || ASSET_TYPES[mappedType] || asset.type;
+
     return {
       ...defaultData,
       ...asset,
-      // Ensure type is one of the allowed values
-      type: (asset.type === 'liability' || asset.type === 'cash' || asset.type === 'investment' || 
-             asset.type === 'fixed_asset' || asset.type === 'receivable') ? 
-             asset.type : 'cash',
-      // For category, use the asset's category or determine from type
-      category: asset.category || (asset.type === 'liability' ? 'liability' : 'asset'),
-      // Ensure ownerId is set from the asset data
-      ownerId: asset.ownerId || owners[0]?.id || '',
-      // Ensure subcategory is set
+      type: mappedType,
+      typeDisplay,
+      category: isLiability ? 'liability' : 'asset',
+      owner: asset.owner || owners[0]?.name || '',
       subcategory: asset.subcategory || ''
     };
   });
@@ -312,32 +402,56 @@ const AssetFormModal: React.FC<AssetFormModalProps> = ({
   // Update form data when owners or asset changes
   useEffect(() => {
     if (asset) {
+      // Map the type to a valid key
+      const mappedType = getTypeKey(asset.type) || 'cash';
+      const isLiability = mappedType === 'liability' || asset.category === 'liability';
+      const typeDisplay = asset.typeDisplay || ASSET_TYPES[mappedType] || asset.type;
+      
       setFormData(prev => ({
         ...prev,
         ...asset,
-        category: asset.type === 'liability' ? 'liability' : 'asset',
-        ownerId: asset.ownerId || owners[0]?.id || '',
+        type: mappedType,
+        typeDisplay,
+        category: isLiability ? 'liability' : 'asset',
+        owner: asset.owner || owners[0]?.name || '',
+        subcategory: asset.subcategory || ''
       }));
     } else {
-      setFormData(prev => ({
-        ...prev,
-        ownerId: owners[0]?.id || '',
-      }));
+      // Reset form for new asset
+      setFormData({
+        type: 'cash',
+        typeDisplay: ASSET_TYPES.cash,
+        category: 'asset',
+        subcategory: '',
+        name: '',
+        account: '',
+        amount: 0,
+        rate: undefined,
+        note: '',
+        owner: owners[0]?.name || ''
+      });
     }
   }, [asset, owners]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Get the display value for the type
+    const typeDisplayValue = ASSET_TYPES[formData.type] || formData.type;
+    const isLiability = formData.type === 'liability' || formData.category === 'liability';
+    
     // Prepare the data to be saved
-    const saveData = {
+    const saveData: Partial<Asset> = {
       ...formData,
+      type: isLiability ? 'liability' : formData.type,
+      typeDisplay: isLiability ? '负债' : typeDisplayValue,
       amount: Number(formData.amount) || 0,
       rate: formData.rate ? Number(formData.rate) : undefined,
-      // If category is 'liability', ensure type is set to 'liability'
-      ...(formData.category === 'liability' && { type: 'liability' as const }),
+      date: asset?.date || new Date().toISOString().split('T')[0],
+      owner: formData.owner || owners[0]?.name || '',
     };
 
+    console.log('Saving asset data:', saveData);
     onSave(saveData);
   };
 
@@ -348,8 +462,22 @@ const AssetFormModal: React.FC<AssetFormModalProps> = ({
     }
     
     // For assets, get subcategories based on the selected type
-    const typeKey = formData.type as keyof typeof ASSET_CATEGORIES;
-    return ASSET_CATEGORIES[typeKey] || [];
+    // The type should already be a valid key, but we'll handle any case
+    const typeKey = formData.type;
+    
+    // Check if the type is a direct key in ASSET_CATEGORIES
+    if (typeKey && typeKey in ASSET_CATEGORIES) {
+      return ASSET_CATEGORIES[typeKey as keyof typeof ASSET_CATEGORIES] || [];
+    }
+    
+    // If the type is a display value, find its key
+    const typeEntry = Object.entries(ASSET_TYPES).find(([_, value]) => value === typeKey);
+    if (typeEntry && typeEntry[0] in ASSET_CATEGORIES) {
+      return ASSET_CATEGORIES[typeEntry[0] as keyof typeof ASSET_CATEGORIES] || [];
+    }
+    
+    // Default to empty array if no match found
+    return [];
   };
   
   // Update type when category changes
@@ -377,171 +505,187 @@ const AssetFormModal: React.FC<AssetFormModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <h2 className="text-xl font-bold mb-4">
-          {asset ? '编辑资产/负债' : '添加资产/负债'}
+          {asset ? '编辑金额' : '添加资产/负债'}
         </h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              类别
-            </label>
-            <select
-              value={formData.category}
-              onChange={handleCategoryChange}
-              className="w-full p-2 border rounded"
-              required
-            >
-              <option value="asset">资产</option>
-              <option value="liability">负债</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              类型
-            </label>
-            <select
-              value={formData.type}
-              onChange={(e) => {
-                const newType = e.target.value as 'cash' | 'investment' | 'fixed_asset' | 'receivable' | 'liability';
-                setFormData(prev => ({
-                  ...prev,
-                  type: newType,
-                  // Reset subcategory when type changes
-                  subcategory: ''
-                }));
-              }}
-              className="w-full p-2 border rounded"
-              required
-              disabled={formData.category === 'liability'}
-            >
-              {Object.entries(ASSET_TYPES)
-                .filter(([key]) => key !== 'liability') // Exclude liability from type options
-                .map(([key, value]) => (
-                  <option key={key} value={key}>
-                    {value}
-                  </option>
-                ))}
-            </select>
-          </div>
-          
-          
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              子类
-            </label>
-            <select
-              value={formData.subcategory}
-              onChange={(e) => setFormData({...formData, subcategory: e.target.value})}
-              className="w-full p-2 border rounded"
-              required
-            >
-              {getSubcategories().map((subcategory) => (
-                <option key={subcategory} value={subcategory}>
-                  {subcategory}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              名称
-            </label>
-            <input
-              type="text"
-              value={formData.name || ''}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full p-2 border rounded"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              账户/说明
-            </label>
-            <input
-              type="text"
-              value={formData.account || ''}
-              onChange={(e) => setFormData({...formData, account: e.target.value})}
-              className="w-full p-2 border rounded"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              金额 (元)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={formData.amount || ''}
-              onChange={(e) => setFormData({...formData, amount: e.target.value as any})}
-              className="w-full p-2 border rounded"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              利率 (%)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={formData.rate || ''}
-              onChange={(e) => setFormData({...formData, rate: e.target.value as any})}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              所有人
-            </label>
-            <select
-              value={formData.ownerId || ''}
-              onChange={(e) => {
-                console.log('Owner changed to:', e.target.value);
-                setFormData(prev => ({
-                  ...prev,
-                  ownerId: e.target.value
-                }));
-              }}
-              className="w-full p-2 border rounded"
-              required
-            >
-              {owners.length === 0 ? (
-                <option value="">加载中...</option>
-              ) : (
-                owners.map((owner) => (
-                  <option key={owner.id} value={owner.id}>
-                    {owner.displayName || owner.name}
-                  </option>
-                ))
-              )}
-            </select>
-            {formData.ownerId && !owners.some(owner => owner.id === formData.ownerId) && (
-              <p className="mt-1 text-sm text-yellow-600">
-                注意: 当前选择的所有人可能不存在
-              </p>
-            )}
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              备注
-            </label>
-            <textarea
-              value={formData.note || ''}
-              onChange={(e) => setFormData({...formData, note: e.target.value})}
-              className="w-full p-2 border rounded"
-              rows={3}
-            />
-          </div>
+          {isEditMode ? (
+            <>
+              <div className="space-y-2 p-3 bg-gray-50 rounded">
+                <div>
+                  <div className="text-sm text-gray-500">账户/说明</div>
+                  <div className="font-medium">{formData.account || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">所有人</div>
+                  <div className="font-medium">
+                    {owners.find(o => o.name === formData.owner)?.displayName || formData.owner || '-'}
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  金额 (元)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.amount || ''}
+                  onChange={(e) => setFormData({...formData, amount: e.target.value as any})}
+                  className="w-full p-2 border rounded"
+                  required
+                  autoFocus
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  类别
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={handleCategoryChange}
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  <option value="asset">资产</option>
+                  <option value="liability">负债</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  类型
+                </label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => {
+                    const newType = e.target.value as 'cash' | 'investment' | 'fixed_asset' | 'receivable' | 'liability';
+                    setFormData(prev => ({
+                      ...prev,
+                      type: newType,
+                      subcategory: ''
+                    }));
+                  }}
+                  className="w-full p-2 border rounded"
+                  required
+                  disabled={formData.category === 'liability'}
+                >
+                  {Object.entries(ASSET_TYPES)
+                    .filter(([key]) => key !== 'liability')
+                    .map(([key, value]) => (
+                      <option key={key} value={key}>
+                        {value}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  子类
+                </label>
+                <select
+                  value={formData.subcategory}
+                  onChange={(e) => setFormData({...formData, subcategory: e.target.value})}
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  {getSubcategories().map((subcategory) => (
+                    <option key={subcategory} value={subcategory}>
+                      {subcategory}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  名称
+                </label>
+                <input
+                  type="text"
+                  value={formData.name || ''}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  账户/说明
+                </label>
+                <input
+                  type="text"
+                  value={formData.account || ''}
+                  onChange={(e) => setFormData({...formData, account: e.target.value})}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  金额 (元)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.amount || ''}
+                  onChange={(e) => setFormData({...formData, amount: e.target.value as any})}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  利率 (%)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.rate || ''}
+                  onChange={(e) => setFormData({...formData, rate: e.target.value as any})}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  所有人
+                </label>
+                <select
+                  value={formData.owner}
+                  onChange={handleOwnerChange}
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  {owners.map(owner => (
+                    <option key={owner.id} value={owner.name}>
+                      {owner.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  备注
+                </label>
+                <textarea
+                  value={formData.note || ''}
+                  onChange={(e) => setFormData({...formData, note: e.target.value})}
+                  className="w-full p-2 border rounded"
+                  rows={3}
+                />
+              </div>
+            </>
+          )}
           
           <div className="flex justify-end space-x-2 pt-4">
             <button
@@ -555,7 +699,7 @@ const AssetFormModal: React.FC<AssetFormModalProps> = ({
               type="submit"
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
-              保存
+              {isEditMode ? '更新金额' : '保存'}
             </button>
           </div>
         </form>

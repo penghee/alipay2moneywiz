@@ -2,6 +2,7 @@ export interface Asset {
   id: string;
   date: string; // YYYY-MM-DD
   type: 'cash' | 'investment' | 'fixed_asset' | 'receivable' | 'liability';
+  typeDisplay: string; // Display name for the type
   category: string;
   subcategory: string;
   name: string;
@@ -9,7 +10,7 @@ export interface Asset {
   amount: number;
   rate?: number; // Interest rate or return rate
   note?: string;
-  ownerId: string; // Reference to owner in bill_owners.json
+  owner: string; // Store owner name directly
 }
 
 export interface Liability extends Asset {
