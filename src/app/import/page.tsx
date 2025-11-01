@@ -26,9 +26,6 @@ interface UploadResult {
   success: boolean;
   message: string;
   records: number;
-  year: number;
-  month: number;
-  outputPath: string;
 }
 
 export default function ImportPage() {
@@ -101,7 +98,7 @@ export default function ImportPage() {
 
   const handleViewStats = () => {
     if (result) {
-      router.push(`/year/${result.year}`);
+      router.push(`/`);
     }
   };
 
