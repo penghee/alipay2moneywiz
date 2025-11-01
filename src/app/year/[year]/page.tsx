@@ -346,7 +346,17 @@ export default function YearPage({
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">结余</p>
+                <div className="flex items-center text-sm font-medium text-gray-600">
+                  <span>结余</span>
+                  <div className="ml-1 group relative">
+                    <span className="text-xs text-gray-400 cursor-help">ⓘ</span>
+                    <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 text-xs text-gray-700 bg-white rounded shadow-lg border border-gray-200 z-10">
+                      结余 = 总收入 - 总支出
+                      <br />
+                      正数表示结余，负数表示赤字。
+                    </div>
+                  </div>
+                </div>
                 <p
                   className={`text-2xl font-bold ${stats.totalBalance >= 0 ? "text-green-600" : "text-red-600"}`}
                 >
