@@ -1,21 +1,20 @@
-'use client';
+"use client";
 
-import React from 'react';
-import {
-  Sankey,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts';
+import React from "react";
+import { Sankey, ResponsiveContainer, Tooltip } from "recharts";
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
 interface SankeyNode {
   name: string;
+  x?: number;
+  y?: number;
+  value?: number;
 }
 
 interface SankeyLink {
-  source: number;
-  target: number;
+  source: number | SankeyNode;
+  target: number | SankeyNode;
   value: number;
 }
 
@@ -31,10 +30,40 @@ interface SankeyChartProps {
   };
 }
 
-const CustomNode = (props: any) => {
+interface CustomNodeProps {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  index: number;
+  payload: SankeyNode & { value?: number }; // Combine SankeyNode with optional value
+  containerWidth: number;
+}
+
+interface CustomLinkProps {
+  sourceX: number;
+  targetX: number;
+  sourceY: number;
+  targetY: number;
+  sourceControlX: number;
+  targetControlX: number;
+  sourceRelativeY: number;
+  targetRelativeY: number;
+  linkWidth: number;
+  index: number;
+  payload?: Omit<SankeyLink, "source" | "target"> & {
+    source: SankeyNode;
+    target: SankeyNode;
+    value?: number;
+  };
+  value?: number;
+  key?: React.Key | null;
+}
+
+const CustomNode = (props: CustomNodeProps) => {
   const { x, y, width, height, index, payload, containerWidth } = props;
   const isOut = x > containerWidth / 2;
-  
+
   return (
     <g>
       <rect
@@ -48,31 +77,40 @@ const CustomNode = (props: any) => {
       <text
         x={isOut ? x - 6 : x + width + 6}
         y={y + height / 2}
-        textAnchor={isOut ? 'end' : 'start'}
+        textAnchor={isOut ? "end" : "start"}
         dominantBaseline="middle"
         fontSize={12}
       >
-        {payload.name}
+        {payload?.name}
       </text>
       <text
         x={isOut ? x - 6 : x + width + 6}
         y={y + height / 2 + 16}
-        textAnchor={isOut ? 'end' : 'start'}
+        textAnchor={isOut ? "end" : "start"}
         dominantBaseline="middle"
         fontSize={12}
         fill="#999"
       >
-        ¥{payload.value?.toLocaleString()}
+        ¥{payload?.value?.toLocaleString()}
       </text>
     </g>
   );
 };
 
-const CustomLink = (props: any) => {
-  const { sourceX, targetX, sourceY, targetY, sourceControlX, targetControlX, linkWidth, index } = props;
+const CustomLink = (props: CustomLinkProps) => {
+  const {
+    sourceX,
+    targetX,
+    sourceY,
+    targetY,
+    sourceControlX,
+    targetControlX,
+    linkWidth,
+    index,
+  } = props;
   const gradientId = `linkGradient${index}`;
   const color = COLORS[index % COLORS.length];
-  
+
   return (
     <>
       <defs>
@@ -106,13 +144,15 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ data }) => {
     <ResponsiveContainer width="100%" height="100%">
       <Sankey
         data={data}
-        node={<CustomNode containerWidth={1000} />}
-        link={<CustomLink />}
+        node={(nodeProps) => (
+          <CustomNode {...nodeProps} containerWidth={1000} />
+        )}
+        link={(linkProps) => <CustomLink {...linkProps} />}
         nodePadding={20}
         margin={{ top: 20, right: 160, bottom: 20, left: 50 }}
       >
-        <Tooltip 
-          formatter={(value: number) => [`¥${value.toLocaleString()}`, '金额']}
+        <Tooltip
+          formatter={(value: number) => [`¥${value.toLocaleString()}`, "金额"]}
           labelFormatter={(label) => `项目: ${label}`}
         />
       </Sankey>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Pencil, Trash2, Save, X, Plus } from "lucide-react";
 import billOwners from "../config/bill_owners.json";
+import { Asset } from "@/lib/types/asset";
 
 // Type definitions
 type CategoryType = "资产" | "负债";
@@ -133,63 +134,6 @@ const TableCell = ({
   <td className={`px-6 py-4 whitespace-nowrap ${className}`}>{children}</td>
 );
 
-// Simplified Select component
-const Select = ({
-  value,
-  onValueChange,
-  children,
-}: {
-  value: string;
-  onValueChange: (value: string) => void;
-  children: React.ReactNode;
-}) => (
-  <select
-    value={value}
-    onChange={(e) => onValueChange(e.target.value)}
-    className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-  >
-    {children}
-  </select>
-);
-
-const SelectTrigger = ({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => <div className={className}>{children}</div>;
-
-const SelectValue = ({ placeholder }: { placeholder: string }) => (
-  <span>{placeholder}</span>
-);
-
-const SelectContent = ({ children }: { children: React.ReactNode }) => (
-  <div className="mt-1">{children}</div>
-);
-
-const SelectItem = ({
-  value,
-  children,
-}: {
-  value: string;
-  children: React.ReactNode;
-}) => <option value={value}>{children}</option>;
-
-interface Asset {
-  id: string;
-  type: string;
-  date: string;
-  category: string;
-  subcategory: string;
-  name: string;
-  account: string;
-  amount: number;
-  rate: string;
-  note: string;
-  owner: string;
-}
-
 interface Owner {
   id: string;
   name: string;
@@ -207,10 +151,16 @@ export function AssetsTable({
   onSave,
   isSaving: externalIsSaving,
 }: AssetsTableProps) {
+  const [assets, setAssets] = useState<Asset[]>(initialAssets);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
-  const [assets, setAssets] = useState<Asset[]>([]);
+  const [editedAsset, setEditedAsset] = useState<Partial<Asset>>({});
+  const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Filter and sort assets
+  const filteredAssets = useMemo(() => {
+    return [...assets];
+  }, [assets]);
 
   // Update local state when initialAssets prop changes
   useEffect(() => {
@@ -226,35 +176,46 @@ export function AssetsTable({
 
   const handleEdit = (asset: Asset) => {
     setEditingId(asset.id);
-    setEditingAsset({ ...asset });
+    setEditedAsset({ ...asset });
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditingAsset(null);
+    setEditedAsset({});
+  };
+
+  const handleFieldChange = (field: keyof Asset, value: string | number) => {
+    setEditedAsset((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const handleSave = async () => {
-    if (!editingAsset) return;
+    if (!editingId) return;
 
+    const updatedAssets = initialAssets.map((asset) =>
+      asset.id === editingId
+        ? {
+            ...asset,
+            ...editedAsset,
+            // Ensure amount is a number
+            amount:
+              editedAsset.amount !== undefined
+                ? Number(editedAsset.amount)
+                : asset.amount,
+          }
+        : asset,
+    );
+
+    setIsSaving(true);
     try {
-      setIsSaving(true);
-      const updatedAssets = assets.map((asset) =>
-        asset.id === editingId ? { ...editingAsset } : asset,
-      );
-
-      // Update local state optimistically
-      setAssets(updatedAssets);
-
-      // Call the parent's onSave and wait for it to complete
       await onSave(updatedAssets);
-
-      // Reset editing state only after successful save
       setEditingId(null);
-      setEditingAsset(null);
+      setEditedAsset({});
+      setAssets(updatedAssets);
     } catch (error) {
       console.error("Error saving asset:", error);
-      // Optionally show error to user
     } finally {
       setIsSaving(false);
     }
@@ -263,20 +224,21 @@ export function AssetsTable({
   const handleAddNew = () => {
     const newAsset: Asset = {
       id: `new-${Date.now()}`,
-      type: "资产",
+      type: "活期",
+      typeDisplay: "活期",
       date: new Date().toISOString().split("T")[0],
       category: "",
       subcategory: "",
       name: "",
       account: "",
       amount: 0,
-      rate: "",
+      rate: undefined,
       note: "",
       owner: "",
     };
 
     setEditingId(newAsset.id);
-    setEditingAsset(newAsset);
+    setEditedAsset(newAsset);
     // Add the new asset to the beginning of the list
     setAssets([newAsset, ...assets]);
   };
@@ -296,27 +258,6 @@ export function AssetsTable({
         setIsSaving(false);
       }
     }
-  };
-
-  const handleFieldChange = (field: keyof Asset, value: string | number) => {
-    if (!editingAsset) return;
-    setEditingAsset({ ...editingAsset, [field]: value });
-  };
-
-  const resetEditingAsset = () => {
-    setEditingAsset({
-      id: "",
-      type: "资产",
-      date: new Date().toISOString().split("T")[0],
-      category: "",
-      subcategory: "",
-      name: "",
-      account: "",
-      amount: 0,
-      rate: "",
-      note: "",
-      owner: "",
-    });
   };
 
   return (
@@ -356,7 +297,7 @@ export function AssetsTable({
                   <>
                     <TableCell>
                       <select
-                        value={editingAsset?.type || ""}
+                        value={editedAsset?.type || ""}
                         onChange={(e) =>
                           handleFieldChange("type", e.target.value)
                         }
@@ -370,7 +311,7 @@ export function AssetsTable({
                     <TableCell>
                       <Input
                         type="date"
-                        value={editingAsset?.date}
+                        value={editedAsset?.date}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           handleFieldChange("date", e.target.value)
                         }
@@ -379,16 +320,16 @@ export function AssetsTable({
                     </TableCell>
                     <TableCell>
                       <select
-                        value={editingAsset?.category || ""}
+                        value={editedAsset?.category || ""}
                         onChange={(e) =>
                           handleFieldChange("category", e.target.value)
                         }
                         className="w-[100px] p-2 border rounded-md"
                       >
                         <option value="">选择分类</option>
-                        {editingAsset?.type &&
+                        {editedAsset?.type &&
                           CATEGORIES[
-                            editingAsset.type as keyof typeof CATEGORIES
+                            editedAsset.type as keyof typeof CATEGORIES
                           ]?.map((cat) => (
                             <option key={cat} value={cat}>
                               {cat}
@@ -398,18 +339,18 @@ export function AssetsTable({
                     </TableCell>
                     <TableCell>
                       <select
-                        value={editingAsset?.subcategory || ""}
+                        value={editedAsset?.subcategory || ""}
                         onChange={(e) =>
                           handleFieldChange("subcategory", e.target.value)
                         }
                         className="w-[100px] p-2 border rounded-md"
-                        disabled={!editingAsset?.category}
+                        disabled={!editedAsset?.category}
                       >
                         <option value="">选择子分类</option>
-                        {editingAsset?.category &&
+                        {editedAsset?.category &&
                           SUBCATEGORIES[
-                            editingAsset.type as keyof typeof SUBCATEGORIES
-                          ]?.[editingAsset.category]?.map((subcat) => (
+                            editedAsset.type as keyof typeof SUBCATEGORIES
+                          ]?.[editedAsset.category]?.map((subcat) => (
                             <option key={subcat} value={subcat}>
                               {subcat}
                             </option>
@@ -418,7 +359,7 @@ export function AssetsTable({
                     </TableCell>
                     <TableCell>
                       <Input
-                        value={editingAsset?.name}
+                        value={editedAsset?.name}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           handleFieldChange("name", e.target.value)
                         }
@@ -428,7 +369,7 @@ export function AssetsTable({
                     </TableCell>
                     <TableCell>
                       <Input
-                        value={editingAsset?.account}
+                        value={editedAsset?.account}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           handleFieldChange("account", e.target.value)
                         }
@@ -439,7 +380,7 @@ export function AssetsTable({
                     <TableCell>
                       <input
                         type="number"
-                        value={editingAsset?.amount || ""}
+                        value={editedAsset?.amount || ""}
                         onChange={(e) =>
                           handleFieldChange(
                             "amount",
@@ -451,7 +392,7 @@ export function AssetsTable({
                     </TableCell>
                     <TableCell>
                       <select
-                        value={editingAsset?.owner || ""}
+                        value={editedAsset?.owner || ""}
                         onChange={(e) =>
                           handleFieldChange("owner", e.target.value)
                         }

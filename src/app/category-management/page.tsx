@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect, KeyboardEvent } from 'react';
-import { useRouter } from 'next/navigation';
-import { ChevronLeft, Plus, Trash2, X, Tag } from 'lucide-react';
+import { useState, useEffect, KeyboardEvent } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, Plus, Trash2, X, Tag } from "lucide-react";
 
 type CategoryMap = {
   [key: string]: string[]; // category: tags[]
@@ -11,21 +11,21 @@ type CategoryMap = {
 export default function CategoryManagement() {
   const [categoryMap, setCategoryMap] = useState<CategoryMap>({});
   const [loading, setLoading] = useState(true);
-  const [newCategory, setNewCategory] = useState('');
-  const [newTag, setNewTag] = useState('');
+  const [newCategory, setNewCategory] = useState("");
+  const [newTag, setNewTag] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const router = useRouter();
 
   // Load categories and tags
   useEffect(() => {
-    fetch('/api/category-map')
-      .then(res => res.json())
-      .then(data => {
+    fetch("/api/category-map")
+      .then((res) => res.json())
+      .then((data) => {
         setCategoryMap(data);
         setLoading(false);
       })
-      .catch(err => {
-        console.error('Failed to fetch category map:', err);
+      .catch((err) => {
+        console.error("Failed to fetch category map:", err);
         setLoading(false);
       });
   }, []);
@@ -35,9 +35,10 @@ export default function CategoryManagement() {
     if (newCategory.trim() && !categoryMap[newCategory.trim()]) {
       const categoryName = newCategory.trim();
       updateCategoryMap({
-        addCategory: { name: categoryName }
+        action: "addCategory",
+        name: categoryName,
       });
-      setNewCategory('');
+      setNewCategory("");
     }
   };
 
@@ -45,7 +46,8 @@ export default function CategoryManagement() {
   const handleDeleteCategory = (category: string) => {
     if (confirm(`确定要删除分类 "${category}" 吗？`)) {
       updateCategoryMap({
-        deleteCategory: { name: category }
+        action: "deleteCategory",
+        name: category,
       });
     }
   };
@@ -55,45 +57,55 @@ export default function CategoryManagement() {
     if (newTag.trim()) {
       const tag = newTag.trim();
       updateCategoryMap({
-        addTag: { category, tag }
+        action: "addTag",
+        category,
+        tag,
       });
-      setNewTag('');
+      setNewTag("");
     }
   };
 
   // Delete a tag from a category
   const handleDeleteTag = (category: string, tag: string) => {
     updateCategoryMap({
-      deleteTag: { category, tag }
+      action: "deleteTag",
+      category,
+      tag,
     });
   };
 
   // Handle tag input keydown (Enter to add tag)
   const handleTagKeyDown = (e: KeyboardEvent, category: string) => {
-    if (e.key === 'Enter' && newTag.trim()) {
+    if (e.key === "Enter" && newTag.trim()) {
       e.preventDefault();
       handleAddTag(category);
     }
   };
 
+  type CategoryUpdate =
+    | { action: "addCategory"; name: string }
+    | { action: "deleteCategory"; name: string }
+    | { action: "addTag"; category: string; tag: string }
+    | { action: "deleteTag"; category: string; tag: string };
+
   // Update category map in both state and API
-  const updateCategoryMap = async (updates: any) => {
+  const updateCategoryMap = async (updates: CategoryUpdate) => {
     try {
-      const response = await fetch('/api/category-map', {
-        method: 'POST',
+      const response = await fetch("/api/category-map", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(updates),
       });
-      
+
       const result = await response.json();
       if (result.success) {
         // Update local state with the new data from server
         setCategoryMap(result.data);
       }
     } catch (err) {
-      console.error('Failed to update category map:', err);
+      console.error("Failed to update category map:", err);
     }
   };
 
@@ -129,7 +141,7 @@ export default function CategoryManagement() {
               type="text"
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+              onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
               placeholder="输入新分类名称"
               className="flex-1 p-2 border rounded-lg"
             />
@@ -145,7 +157,10 @@ export default function CategoryManagement() {
         {/* Categories List */}
         <div className="space-y-6">
           {Object.entries(categoryMap).map(([category, tags]) => (
-            <div key={category} className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div
+              key={category}
+              className="bg-white rounded-lg shadow-md overflow-hidden"
+            >
               <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
                 <h3 className="text-lg font-medium">{category}</h3>
                 <button
@@ -156,13 +171,16 @@ export default function CategoryManagement() {
                   <Trash2 className="h-5 w-5" />
                 </button>
               </div>
-              
+
               <div className="p-4">
                 {/* Tags */}
                 <div className="mb-4">
                   <div className="flex flex-wrap gap-2 mb-4">
                     {tags.map((tag) => (
-                      <div key={tag} className="bg-blue-100 px-3 py-1 rounded-full text-sm flex items-center">
+                      <div
+                        key={tag}
+                        className="bg-blue-100 px-3 py-1 rounded-full text-sm flex items-center"
+                      >
                         <Tag className="h-3 w-3 mr-1 text-blue-500" />
                         <span>{tag}</span>
                         <button
