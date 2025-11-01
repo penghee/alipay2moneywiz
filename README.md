@@ -40,11 +40,11 @@ app/
 
 ## 数据格式
 
-应用读取 `../money-data/` 目录下的 CSV 文件（可通过环境变量自定义路径），支持以下格式：
+应用读取 `./data/` 目录下的 CSV 文件（可通过环境变量自定义路径），支持以下格式：
 
 ```csv
 账户,转账,描述,交易对方,分类,日期,备注,标签,金额
-招商信用卡2542,未知账户,退款-平安好车主预支付,,交通,2025-07-28,,,78.85
+招商信用卡,未知账户,其他支付,,交通,2025-07-28,,,78.85
 ```
 
 ## 安装和运行
@@ -60,13 +60,13 @@ npm install
 
 ```bash
 # 使用绝对路径（推荐）
-MONEY_DATA_PATH=/Users/yourname/Documents/money-data
+MONEY_DATA_PATH=/Users/yourname/Documents/data
 
 # 或使用相对路径
-MONEY_DATA_DIR=money-data
+MONEY_DATA_DIR=data
 ```
 
-如果不配置，默认使用 `../money-data` 目录。
+如果不配置，默认使用 `../data` 目录。
 
 详细配置说明请查看 [ENV.md](./ENV.md)
 
@@ -110,7 +110,7 @@ GET /api/stats/monthly/[year]/[month]
 
 ### 数据目录结构
 ```
-money-data/
+data/
 ├── 2025/
 │   ├── 01.csv
 │   ├── 02.csv
@@ -141,13 +141,14 @@ money-data/
 可以使用 Vercel、Netlify 等平台部署：
 
 ```bash
+npm install
 npm run build
-npm start
+npm run start
 ```
 
 ## 注意事项
 
-1. 确保数据目录（默认 `money-data`）中有有效的 CSV 文件
+1. 确保数据目录（默认 `data`）中有有效的 CSV 文件
 2. 可通过 `.env.local` 文件自定义数据目录路径
 3. CSV 文件需要包含正确的列名
 4. 金额字段应为数字格式
