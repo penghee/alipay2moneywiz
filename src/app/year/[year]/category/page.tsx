@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, TrendingUp, BarChart3, Table2 } from "lucide-react";
+import { ArrowLeft, TrendingUp, BarChart3, Table2, User } from "lucide-react";
+import ownersData from "@/config/bill_owners.json";
 import {
   LineChart,
   Line,
@@ -55,7 +56,13 @@ export default function CategoryPage({
     new Set(),
   );
   const [topExpensesLimit, setTopExpensesLimit] = useState<number>(20);
+  const [selectedOwner, setSelectedOwner] = useState<string>("all");
   const router = useRouter();
+
+  const owners = useMemo(
+    () => [{ id: "all", name: "全部" }, ...ownersData.owners],
+    [],
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,7 +78,15 @@ export default function CategoryPage({
 
         setYear(yearNum);
 
-        const response = await fetch(`/api/stats/category/${yearNum}`);
+        // Build query parameters
+        const queryParams = new URLSearchParams();
+        if (selectedOwner !== "all") {
+          queryParams.append("owner", selectedOwner);
+        }
+
+        const response = await fetch(
+          `/api/stats/category/${yearNum}?${queryParams.toString()}`,
+        );
         if (response.ok) {
           const data = await response.json();
           setStats(data);
@@ -86,7 +101,7 @@ export default function CategoryPage({
     };
 
     fetchData();
-  }, [params]);
+  }, [params, selectedOwner]);
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat("zh-CN", {
@@ -290,6 +305,21 @@ export default function CategoryPage({
             <h1 className="text-3xl font-bold text-gray-900">
               {year}年 分类趋势分析
             </h1>
+
+            <div className="flex items-center space-x-2 ml-4">
+              <User className="h-5 w-5 text-gray-500" />
+              <select
+                value={selectedOwner}
+                onChange={(e) => setSelectedOwner(e.target.value)}
+                className="w-32 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {owners.map((owner) => (
+                  <option key={owner.id} value={owner.id}>
+                    {owner.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 

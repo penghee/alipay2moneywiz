@@ -478,6 +478,7 @@ export function getAvailableMonths(year: number, ownerId?: string): number[] {
 // 计算分类年度统计（按月聚合）
 export function calculateCategoryYearlyStats(
   year: number,
+  ownerId?: string,
 ): CategoryYearlyStats {
   const dataDir = getYearDataDirectory(year);
 
@@ -504,6 +505,15 @@ export function calculateCategoryYearlyStats(
     const transactions = readCSV(filePath);
 
     transactions.forEach((t) => {
+      // Skip transactions that don't match the owner filter
+      if (ownerId) {
+        const ownerName = getOwnerName(ownerId);
+        // Check both owner fields for backward compatibility
+        if (t.owner !== ownerName && t["账单人"] !== ownerName) {
+          return;
+        }
+      }
+
       const amount = parseFloat(t["金额"]);
       const category = t["分类"];
 
@@ -553,6 +563,13 @@ export function calculateCategoryYearlyStats(
   const transactions = readAndFilterCSVFiles(dataDir);
 
   for (const tx of transactions) {
+    // Skip transactions that don't match the owner filter
+    if (ownerId) {
+      const ownerName = getOwnerName(ownerId);
+      if (tx.owner !== ownerName && tx["账单人"] !== ownerName) {
+        continue;
+      }
+    }
     const amount = parseFloat(tx.金额);
     if (amount < 0) {
       // 只处理支出

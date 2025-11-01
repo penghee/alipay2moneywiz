@@ -292,7 +292,7 @@ export default function YearPage({
             <span>返回</span>
           </button>
 
-          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-3">
               <Calendar className="h-8 w-8 text-blue-600" />
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">

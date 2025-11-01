@@ -5,6 +5,7 @@ export interface MonthlyFinancials {
   month: string;
   expenses: number;
   salary: number;
+  income: number;
   balance: number;
 }
 
@@ -33,6 +34,7 @@ export async function getLast12MonthsFinancials(): Promise<
           month: format(date, "yyyy-MM"),
           expenses: stats.expense,
           salary,
+          income: stats.income,
           balance: stats.income - stats.expense,
         });
 
@@ -66,6 +68,7 @@ export async function getLast12MonthsFinancials(): Promise<
         month: format(date, "yyyy-MM"),
         expenses: 0,
         salary: 0,
+        income: 0,
         balance: 0,
       });
     }
