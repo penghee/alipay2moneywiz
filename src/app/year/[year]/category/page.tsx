@@ -15,6 +15,7 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+import { formatDate } from "date-fns";
 
 interface CategoryMonthlyData {
   month: number;
@@ -27,11 +28,19 @@ interface CategoryStats {
   count: number;
 }
 
+interface TopExpense {
+  date: string;
+  category: string;
+  amount: number;
+  description: string;
+}
+
 interface CategoryYearlyStats {
   categories: string[];
   monthlyData: Record<string, CategoryMonthlyData[]>;
   totalByCategory: Record<string, CategoryStats>;
   totalExpense: number;
+  topExpenses: TopExpense[];
 }
 
 export default function CategoryPage({
@@ -45,6 +54,7 @@ export default function CategoryPage({
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
     new Set(),
   );
+  const [topExpensesLimit, setTopExpensesLimit] = useState<number>(20);
   const router = useRouter();
 
   useEffect(() => {
@@ -420,7 +430,7 @@ export default function CategoryPage({
                   ]}
                 />
                 <Legend />
-                {Array.from(selectedCategories).map((category, index) => (
+                {Array.from(selectedCategories).map((category) => (
                   <Line
                     key={category}
                     type="monotone"
@@ -436,6 +446,90 @@ export default function CategoryPage({
             </ResponsiveContainer>
           </div>
         )}
+        {/* Top Expenses Table */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Table2 className="h-5 w-5 mr-2" />
+              单笔支出TOP {topExpensesLimit}
+            </h3>
+            <div className="flex items-center">
+              <label
+                htmlFor="limit-select"
+                className="text-sm text-gray-600 mr-2"
+              >
+                显示条数:
+              </label>
+              <select
+                id="limit-select"
+                value={topExpensesLimit}
+                onChange={(e) => setTopExpensesLimit(Number(e.target.value))}
+                className="block w-24 rounded-md border-gray-300 py-1 pl-2 pr-8 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+              >
+                <option value={20}>20 条</option>
+                <option value={50}>50 条</option>
+                <option value={100}>100 条</option>
+              </select>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    日期
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    分类
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    描述
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    金额
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {stats.topExpenses
+                  .slice(0, topExpensesLimit)
+                  .map((expense, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(expense.date, "yyyy-MM-dd")}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div
+                            className="w-3 h-3 rounded-full mr-2"
+                            style={{
+                              backgroundColor:
+                                COLORS[
+                                  stats.categories.indexOf(expense.category) %
+                                    COLORS.length
+                                ] || "#9CA3AF",
+                            }}
+                          ></div>
+                          <span className="text-sm text-gray-900">
+                            {expense.category}
+                          </span>
+                        </div>
+                      </td>
+                      <td
+                        className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate"
+                        title={expense.description}
+                      >
+                        {expense.description}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
+                        ¥{formatMoney(expense.amount)}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         {/* Category Summary Table */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
