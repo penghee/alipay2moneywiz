@@ -29,7 +29,7 @@ export async function GET() {
         summary.byOwner[asset.owner] = { assets: 0, liabilities: 0, netWorth: 0 };
       }
       
-      if (asset.type === 'liability') {
+      if (asset.type === '负债') {
         summary.byOwner[asset.owner].liabilities += amount;
         summary.totalLiabilities += amount;
       } else {

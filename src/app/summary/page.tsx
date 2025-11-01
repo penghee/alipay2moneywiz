@@ -145,11 +145,9 @@ export default function SummaryPage() {
         ...summaryData
       }));
       
-      return true;
     } catch (err) {
       console.error('Error saving assets:', err);
       setError('Failed to save assets');
-      return false;
     } finally {
       setIsSaving(false);
     }

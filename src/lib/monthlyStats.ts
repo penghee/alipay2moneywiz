@@ -45,6 +45,6 @@ export async function getLast12MonthsFinancials(): Promise<MonthlyFinancials[]> 
 }
 
 export function formatMonthYear(dateStr: string): string {
-  const date = parse(`${dateStr}-01`);
+  const date = parse(`${dateStr}-01`, 'yyyy-MM-dd', new Date());
   return format(date, 'MMM yyyy');
 }
