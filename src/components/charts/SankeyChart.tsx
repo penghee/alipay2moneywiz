@@ -152,7 +152,10 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ data }) => {
         margin={{ top: 20, right: 160, bottom: 20, left: 50 }}
       >
         <Tooltip
-          formatter={(value: number) => [`¥${value.toLocaleString()}`, "金额"]}
+          formatter={(value: number, name: string) => [
+            `¥${value.toLocaleString()}`,
+            name,
+          ]}
           labelFormatter={(label) => `项目: ${label}`}
         />
       </Sankey>

@@ -376,9 +376,9 @@ export default function MonthPage({
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => [
+                  formatter={(value: number, name: string) => [
                     `¥${formatMoney(value)}`,
-                    "金额",
+                    name,
                   ]}
                 />
               </RechartsPieChart>
@@ -402,9 +402,9 @@ export default function MonthPage({
                 />
                 <YAxis />
                 <Tooltip
-                  formatter={(value: number) => [
+                  formatter={(value: number, name: string) => [
                     `¥${formatMoney(value)}`,
-                    "金额",
+                    name,
                   ]}
                 />
                 <Bar dataKey="value" fill="#3b82f6" />
