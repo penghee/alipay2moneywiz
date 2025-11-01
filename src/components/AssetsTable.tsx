@@ -1,11 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Pencil, Trash2, Save, X, Plus } from 'lucide-react';
-import billOwners from '../config/bill_owners.json';
+import { useState, useEffect, useMemo } from "react";
+import { Pencil, Trash2, Save, X, Plus } from "lucide-react";
+import billOwners from "../config/bill_owners.json";
 
 // Type definitions
-type CategoryType = '资产' | '负债';
-type AssetCategory = '活期' | '投资' | '固定资产' | '应收' | '其他';
-type LiabilityCategory = '信用贷' | '信用卡' | '花呗/白条' | '亲友借款' | '其他';
+type CategoryType = "资产" | "负债";
+type AssetCategory = "活期" | "投资" | "固定资产" | "应收" | "其他";
+type LiabilityCategory =
+  | "信用贷"
+  | "信用卡"
+  | "花呗/白条"
+  | "亲友借款"
+  | "其他";
 type CategoryMap = {
   [key in CategoryType]: string[];
 };
@@ -17,54 +22,54 @@ type SubcategoryMap = {
 
 // Category and subcategory constants
 const CATEGORIES: CategoryMap = {
-  '资产': ['活期', '投资', '固定资产', '应收', '其他'],
-  '负债': ['信用贷', '信用卡', '花呗/白条', '亲友借款', '其他']
+  资产: ["活期", "投资", "固定资产", "应收", "其他"],
+  负债: ["信用贷", "信用卡", "花呗/白条", "亲友借款", "其他"],
 } as const;
 
 const SUBCATEGORIES: SubcategoryMap = {
-  '资产': {
-    '活期': ['现金', '活期存款'],
-    '投资': ['货基', '定期', '股票', '基金', '债券', '养老金'],
-    '固定资产': ['房产', '汽车', '公积金'],
-    '应收': ['应收'],
-    '其他': ['其他']
+  资产: {
+    活期: ["现金", "活期存款"],
+    投资: ["货基", "定期", "股票", "基金", "债券", "养老金"],
+    固定资产: ["房产", "汽车", "公积金"],
+    应收: ["应收"],
+    其他: ["其他"],
   },
-  '负债': {
-    '信用贷': ['信用贷'],
-    '信用卡': ['信用卡'],
-    '花呗/白条': ['花呗', '白条'],
-    '亲友借款': ['亲友借款'],
-    '其他': ['其他']
-  }
+  负债: {
+    信用贷: ["信用贷"],
+    信用卡: ["信用卡"],
+    "花呗/白条": ["花呗", "白条"],
+    亲友借款: ["亲友借款"],
+    其他: ["其他"],
+  },
 };
 
 // Using relative imports since shadcn/ui components might not be properly set up
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'ghost' | 'default';
-  size?: 'sm' | 'default' | 'icon';
+  variant?: "ghost" | "default";
+  size?: "sm" | "default" | "icon";
 }
 
-const Button = ({ 
-  children, 
-  variant = 'default',
-  size = 'default',
-  className = '',
-  ...props 
+const Button = ({
+  children,
+  variant = "default",
+  size = "default",
+  className = "",
+  ...props
 }: ButtonProps) => {
-  const baseStyles = 'rounded-md flex items-center justify-center';
+  const baseStyles = "rounded-md flex items-center justify-center";
   const variantStyles = {
-    default: 'bg-blue-500 text-white hover:bg-blue-600',
-    ghost: 'hover:bg-gray-100',
+    default: "bg-blue-500 text-white hover:bg-blue-600",
+    ghost: "hover:bg-gray-100",
   };
-  
+
   const sizeStyles = {
-    sm: 'px-2 py-1 text-sm',
-    default: 'px-4 py-2',
-    icon: 'p-2',
+    sm: "px-2 py-1 text-sm",
+    default: "px-4 py-2",
+    icon: "p-2",
   };
-  
+
   return (
-    <button 
+    <button
       className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
       {...props}
     >
@@ -74,61 +79,71 @@ const Button = ({
 };
 
 const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-  <input 
+  <input
     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
     {...props}
   />
 );
 
-const Table = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+const Table = ({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
   <div className={`border rounded-md overflow-hidden ${className}`}>
-    <table className="min-w-full divide-y divide-gray-200">
-      {children}
-    </table>
+    <table className="min-w-full divide-y divide-gray-200">{children}</table>
   </div>
 );
 
 const TableHeader = ({ children }: { children: React.ReactNode }) => (
-  <thead className="bg-gray-50">
-    {children}
-  </thead>
+  <thead className="bg-gray-50">{children}</thead>
 );
 
 const TableBody = ({ children }: { children: React.ReactNode }) => (
-  <tbody className="bg-white divide-y divide-gray-200">
-    {children}
-  </tbody>
+  <tbody className="bg-white divide-y divide-gray-200">{children}</tbody>
 );
 
 const TableRow = ({ children }: { children: React.ReactNode }) => (
-  <tr className="hover:bg-gray-50">
-    {children}
-  </tr>
+  <tr className="hover:bg-gray-50">{children}</tr>
 );
 
-const TableHead = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>
+const TableHead = ({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <th
+    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}
+  >
     {children}
   </th>
 );
 
-const TableCell = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <td className={`px-6 py-4 whitespace-nowrap ${className}`}>
-    {children}
-  </td>
+const TableCell = ({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <td className={`px-6 py-4 whitespace-nowrap ${className}`}>{children}</td>
 );
 
 // Simplified Select component
-const Select = ({ 
-  value, 
-  onValueChange, 
-  children 
-}: { 
-  value: string; 
-  onValueChange: (value: string) => void; 
-  children: React.ReactNode 
+const Select = ({
+  value,
+  onValueChange,
+  children,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  children: React.ReactNode;
 }) => (
-  <select 
+  <select
     value={value}
     onChange={(e) => onValueChange(e.target.value)}
     className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
@@ -137,33 +152,29 @@ const Select = ({
   </select>
 );
 
-const SelectTrigger = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <div className={className}>
-    {children}
-  </div>
-);
+const SelectTrigger = ({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => <div className={className}>{children}</div>;
 
 const SelectValue = ({ placeholder }: { placeholder: string }) => (
   <span>{placeholder}</span>
 );
 
 const SelectContent = ({ children }: { children: React.ReactNode }) => (
-  <div className="mt-1">
-    {children}
-  </div>
+  <div className="mt-1">{children}</div>
 );
 
-const SelectItem = ({ 
-  value, 
-  children 
-}: { 
-  value: string; 
-  children: React.ReactNode 
-}) => (
-  <option value={value}>
-    {children}
-  </option>
-);
+const SelectItem = ({
+  value,
+  children,
+}: {
+  value: string;
+  children: React.ReactNode;
+}) => <option value={value}>{children}</option>;
 
 interface Asset {
   id: string;
@@ -191,12 +202,16 @@ interface AssetsTableProps {
   isSaving: boolean;
 }
 
-export function AssetsTable({ assets: initialAssets = [], onSave, isSaving: externalIsSaving }: AssetsTableProps) {
+export function AssetsTable({
+  assets: initialAssets = [],
+  onSave,
+  isSaving: externalIsSaving,
+}: AssetsTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Update local state when initialAssets prop changes
   useEffect(() => {
     // Ensure we always have an array, even if initialAssets is undefined or null
@@ -221,40 +236,61 @@ export function AssetsTable({ assets: initialAssets = [], onSave, isSaving: exte
 
   const handleSave = async () => {
     if (!editingAsset) return;
-    
+
     try {
       setIsSaving(true);
-      const updatedAssets = assets.map(asset => 
-        asset.id === editingId ? { ...editingAsset } : asset
+      const updatedAssets = assets.map((asset) =>
+        asset.id === editingId ? { ...editingAsset } : asset,
       );
-      
+
       // Update local state optimistically
       setAssets(updatedAssets);
-      
+
       // Call the parent's onSave and wait for it to complete
       await onSave(updatedAssets);
-      
+
       // Reset editing state only after successful save
       setEditingId(null);
       setEditingAsset(null);
     } catch (error) {
-      console.error('Error saving asset:', error);
+      console.error("Error saving asset:", error);
       // Optionally show error to user
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleAddNew = () => {
+    const newAsset: Asset = {
+      id: `new-${Date.now()}`,
+      type: "资产",
+      date: new Date().toISOString().split("T")[0],
+      category: "",
+      subcategory: "",
+      name: "",
+      account: "",
+      amount: 0,
+      rate: "",
+      note: "",
+      owner: "",
+    };
+
+    setEditingId(newAsset.id);
+    setEditingAsset(newAsset);
+    // Add the new asset to the beginning of the list
+    setAssets([newAsset, ...assets]);
+  };
+
   const handleDelete = async (id: string) => {
-    if (window.confirm('确定要删除这条记录吗？')) {
+    if (window.confirm("确定要删除这条记录吗？")) {
       try {
         setIsSaving(true);
-        const updatedAssets = assets.filter(asset => asset.id !== id);
+        const updatedAssets = assets.filter((asset) => asset.id !== id);
         // Update local state optimistically
         setAssets(updatedAssets);
         await onSave(updatedAssets);
       } catch (error) {
-        console.error('Error deleting asset:', error);
+        console.error("Error deleting asset:", error);
         // Optionally show error to user and revert state
       } finally {
         setIsSaving(false);
@@ -269,22 +305,35 @@ export function AssetsTable({ assets: initialAssets = [], onSave, isSaving: exte
 
   const resetEditingAsset = () => {
     setEditingAsset({
-      id: '',
-      type: '资产',
-      date: new Date().toISOString().split('T')[0],
-      category: '',
-      subcategory: '',
-      name: '',
-      account: '',
+      id: "",
+      type: "资产",
+      date: new Date().toISOString().split("T")[0],
+      category: "",
+      subcategory: "",
+      name: "",
+      account: "",
       amount: 0,
-      rate: '',
-      note: '',
-      owner: ''
+      rate: "",
+      note: "",
+      owner: "",
     });
-  }
+  };
 
   return (
     <div className="flex flex-col h-screen">
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-800">资产列表</h2>
+          <Button
+            onClick={handleAddNew}
+            className="ml-4"
+            disabled={isSaving || externalIsSaving}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            新增资产
+          </Button>
+        </div>
+      </div>
       <div className="flex-1 overflow-y-auto">
         <Table>
           <TableHeader>
@@ -307,8 +356,10 @@ export function AssetsTable({ assets: initialAssets = [], onSave, isSaving: exte
                   <>
                     <TableCell>
                       <select
-                        value={editingAsset?.type || ''}
-                        onChange={(e) => handleFieldChange('type', e.target.value)}
+                        value={editingAsset?.type || ""}
+                        onChange={(e) =>
+                          handleFieldChange("type", e.target.value)
+                        }
                         className="w-[100px] p-2 border rounded-md"
                       >
                         <option value="">选择类型</option>
@@ -320,39 +371,57 @@ export function AssetsTable({ assets: initialAssets = [], onSave, isSaving: exte
                       <Input
                         type="date"
                         value={editingAsset?.date}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange('date', e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          handleFieldChange("date", e.target.value)
+                        }
                         className="w-[120px]"
                       />
                     </TableCell>
                     <TableCell>
                       <select
-                        value={editingAsset?.category || ''}
-                        onChange={(e) => handleFieldChange('category', e.target.value)}
+                        value={editingAsset?.category || ""}
+                        onChange={(e) =>
+                          handleFieldChange("category", e.target.value)
+                        }
                         className="w-[100px] p-2 border rounded-md"
                       >
                         <option value="">选择分类</option>
-                        {editingAsset?.type && CATEGORIES[editingAsset.type as keyof typeof CATEGORIES]?.map((cat) => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
+                        {editingAsset?.type &&
+                          CATEGORIES[
+                            editingAsset.type as keyof typeof CATEGORIES
+                          ]?.map((cat) => (
+                            <option key={cat} value={cat}>
+                              {cat}
+                            </option>
+                          ))}
                       </select>
                     </TableCell>
                     <TableCell>
                       <select
-                        value={editingAsset?.subcategory || ''}
-                        onChange={(e) => handleFieldChange('subcategory', e.target.value)}
+                        value={editingAsset?.subcategory || ""}
+                        onChange={(e) =>
+                          handleFieldChange("subcategory", e.target.value)
+                        }
                         className="w-[100px] p-2 border rounded-md"
                         disabled={!editingAsset?.category}
                       >
                         <option value="">选择子分类</option>
-                        {editingAsset?.category && SUBCATEGORIES[editingAsset.type as keyof typeof SUBCATEGORIES]?.[editingAsset.category]?.map((subcat) => (
-                          <option key={subcat} value={subcat}>{subcat}</option>
-                        ))}
+                        {editingAsset?.category &&
+                          SUBCATEGORIES[
+                            editingAsset.type as keyof typeof SUBCATEGORIES
+                          ]?.[editingAsset.category]?.map((subcat) => (
+                            <option key={subcat} value={subcat}>
+                              {subcat}
+                            </option>
+                          ))}
                       </select>
                     </TableCell>
                     <TableCell>
                       <Input
                         value={editingAsset?.name}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange('name', e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          handleFieldChange("name", e.target.value)
+                        }
                         placeholder="账户"
                         className="w-[100px]"
                       />
@@ -360,7 +429,9 @@ export function AssetsTable({ assets: initialAssets = [], onSave, isSaving: exte
                     <TableCell>
                       <Input
                         value={editingAsset?.account}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange('account', e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          handleFieldChange("account", e.target.value)
+                        }
                         placeholder="账户"
                         className="w-[100px]"
                       />
@@ -368,19 +439,26 @@ export function AssetsTable({ assets: initialAssets = [], onSave, isSaving: exte
                     <TableCell>
                       <input
                         type="number"
-                        value={editingAsset?.amount || ''}
-                        onChange={(e) => handleFieldChange('amount', parseFloat(e.target.value) || 0)}
+                        value={editingAsset?.amount || ""}
+                        onChange={(e) =>
+                          handleFieldChange(
+                            "amount",
+                            parseFloat(e.target.value) || 0,
+                          )
+                        }
                         className="w-24 p-2 border rounded-md"
                       />
                     </TableCell>
                     <TableCell>
                       <select
-                        value={editingAsset?.owner || ''}
-                        onChange={(e) => handleFieldChange('owner', e.target.value)}
+                        value={editingAsset?.owner || ""}
+                        onChange={(e) =>
+                          handleFieldChange("owner", e.target.value)
+                        }
                         className="w-24 p-2 border rounded-md"
                       >
                         <option value="">选择所有者</option>
-                        {billOwners.owners.map((owner) => (
+                        {availableAccounts?.map((owner) => (
                           <option key={owner.id} value={owner.name}>
                             {owner.name}
                           </option>
@@ -414,8 +492,10 @@ export function AssetsTable({ assets: initialAssets = [], onSave, isSaving: exte
                     <TableCell>{asset.subcategory}</TableCell>
                     <TableCell>{asset.name}</TableCell>
                     <TableCell>{asset.account}</TableCell>
-                    <TableCell className="text-right">{asset.amount.toLocaleString('zh-CN')}</TableCell>
-                    <TableCell>{asset.owner || ''}</TableCell>
+                    <TableCell className="text-right">
+                      {asset.amount.toLocaleString("zh-CN")}
+                    </TableCell>
+                    <TableCell>{asset.owner || ""}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <button
