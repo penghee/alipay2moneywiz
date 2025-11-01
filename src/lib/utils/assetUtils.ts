@@ -76,20 +76,12 @@ export function loadAssets(): Asset[] {
         return [];
       }
 
-      // Map Chinese type to internal type
-      const typeMap: Record<string, keyof typeof ASSET_TYPES> = {
-        '活期': 'cash',
-        '投资': 'investment',
-        '固定资产': 'fixed_asset',
-        '应收': 'receivable',
-        '负债': 'liability'
-      };
-      
-      const assetType = typeMap[entry.type as keyof typeof typeMap] || 'cash';
+      // Use Chinese type directly
+      const assetType = entry.type as '活期' | '投资' | '固定资产' | '应收' | '负债';
       
       return [{
         id: `asset-${Date.now()}-${index}`,
-        type: assetType as 'cash' | 'investment' | 'fixed_asset' | 'receivable' | 'liability',
+        type: assetType,
         typeDisplay: entry.type,
         category: entry.category,
         subcategory: entry.subcategory,
@@ -131,7 +123,7 @@ export function saveAssets(assets: Asset[]): void {
   const rows = assets.map(asset => {
     // Map asset properties to CSV columns in the correct order
     const row = [
-      asset.type === 'liability' ? '负债' : '资产',
+      asset.type, // Now using Chinese type directly
       asset.date,
       asset.category,
       asset.subcategory,

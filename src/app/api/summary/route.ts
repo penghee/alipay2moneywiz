@@ -30,11 +30,10 @@ export async function GET(): Promise<NextResponse<SummaryResponse | { error: str
   try {
     // Load assets directly from the file
     const assets = loadAssets();
-    console.log('assets', assets);
     // Calculate summary data
     // Calculate total assets and investment assets
     const totalAssets = assets
-      .filter((asset: Asset) => asset.type !== 'liability')
+      .filter((asset: Asset) => asset.type !== '负债')
       .reduce((sum: number, asset: Asset) => sum + (Number(asset.amount) || 0), 0);
       
     const investmentAssets = assets
@@ -42,7 +41,7 @@ export async function GET(): Promise<NextResponse<SummaryResponse | { error: str
       .reduce((sum: number, asset: Asset) => sum + (Number(asset.amount) || 0), 0);
       
     const totalLiabilities = assets
-      .filter((asset: Asset) => asset.type === 'liability')
+      .filter((asset: Asset) => asset.type === '负债')
       .reduce((sum: number, asset: Asset) => sum + (Number(asset.amount) || 0), 0);
       
     const netWorth = totalAssets - totalLiabilities;
@@ -84,7 +83,7 @@ export async function GET(): Promise<NextResponse<SummaryResponse | { error: str
         
     // Create links for assets to categories
     const assetLinks = assets
-      .filter((asset: Asset) => asset.type !== 'liability' && asset.category)
+      .filter((asset: Asset) => asset.type !== '负债' && asset.category)
       .map((asset: Asset) => {
         const link = {
           source: nodeMap[asset.category],

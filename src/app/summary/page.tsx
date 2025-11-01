@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowUp, ArrowDown, Wallet, PiggyBank, Scale } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { ArrowUp, ArrowDown, Wallet, PiggyBank, Scale, Plus, Save, X, Trash2 } from 'lucide-react';
+import { AssetsTable } from '@/components/AssetsTable';
 
 // Define types for our data
 interface SankeyNode {
@@ -54,10 +55,25 @@ const SankeyChart = dynamic(
 
 export default function SummaryPage() {
   const [data, setData] = useState<SummaryData | null>(null);
+  const [assets, setAssets] = useState<any[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
   const [debtServiceRatio, setDebtServiceRatio] = useState<number | null>(null);
   const [latestIncome, setLatestIncome] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const fetchAssets = useCallback(async () => {
+    try {
+      const response = await fetch('/api/assets');
+      if (!response.ok) throw new Error('Failed to fetch assets');
+      const assetsData = await response.json();
+      setAssets(assetsData);
+    } catch (err) {
+      console.error('Error fetching assets:', err);
+      setError('Failed to load assets');
+    }
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -95,12 +111,53 @@ export default function SummaryPage() {
       }
     };
 
-    fetchData();
+    const loadAllData = async () => {
+      await Promise.all([fetchData(), fetchAssets()]);
+    };
+    
+    loadAllData().finally(() => setLoading(false));
   }, []);
+
+  const handleSaveAssets = async (updatedAssets: any[]) => {
+    try {
+      setIsSaving(true);
+      const response = await fetch('/api/assets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedAssets),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save assets');
+      }
+      
+      // Refresh summary data
+      const [summaryRes] = await Promise.all([
+        fetch('/api/summary'),
+      ]);
+      
+      if (!summaryRes.ok) throw new Error('Failed to refresh summary data');
+      const summaryData = await summaryRes.json();
+      setData(prevData => ({
+        ...prevData,
+        ...summaryData
+      }));
+      
+      return true;
+    } catch (err) {
+      console.error('Error saving assets:', err);
+      setError('Failed to save assets');
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="space-y-6">
+<div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">资产概览</h1>
           <Skeleton className="h-9 w-24" />
@@ -126,6 +183,15 @@ export default function SummaryPage() {
             </CardHeader>
             <CardContent>
               <Skeleton className="h-[400px] w-full" />
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-5 w-48" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full" />
             </CardContent>
           </Card>
         </div>
@@ -197,20 +263,19 @@ export default function SummaryPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">资产概览</h1>
           <p className="mt-1 text-sm text-gray-500">
-            查看您的资产和负债情况
+            查看和管理您的资产和负债情况
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-500">最后更新: {new Date().toLocaleDateString('zh-CN')}</span>
-          <button
-            onClick={() => window.location.reload()}
+        <div className="flex space-x-2">
+          <button 
             className="p-2 text-gray-400 hover:text-gray-500"
             title="刷新数据"
+            onClick={() => window.location.reload()}
           >
             <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
@@ -425,16 +490,6 @@ export default function SummaryPage() {
                   您的资产和负债分布情况
                 </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <select
-                  className="text-sm border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                  defaultValue="all"
-                >
-                  <option value="all">全部</option>
-                  <option value="assets">仅资产</option>
-                  <option value="liabilities">仅负债</option>
-                </select>
-              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -465,6 +520,13 @@ export default function SummaryPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+      <div className="mt-8">
+        <AssetsTable 
+          assets={assets} 
+          onSave={handleSaveAssets}
+          isSaving={isSaving}
+        />
       </div>
     </div>
   );

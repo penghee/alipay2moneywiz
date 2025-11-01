@@ -1,7 +1,7 @@
 export interface Asset {
   id: string;
   date: string; // YYYY-MM-DD
-  type: 'cash' | 'investment' | 'fixed_asset' | 'receivable' | 'liability';
+  type: '活期' | '投资' | '固定资产' | '应收' | '负债';
   typeDisplay: string; // Display name for the type
   category: string;
   subcategory: string;
@@ -14,7 +14,7 @@ export interface Asset {
 }
 
 export interface Liability extends Asset {
-  type: 'liability';
+  type: '负债';
   dueDate?: string; // For loans with specific due dates
 }
 
