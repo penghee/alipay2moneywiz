@@ -13,6 +13,9 @@ if [ ! -d "./data" ]; then
     echo "   请确保在项目根目录的 data 文件夹中有 CSV 文件"
     echo ""
 fi
+# 确保 npm install
+npm install
+npm run build
 
 # 启动服务器
 npm run start
