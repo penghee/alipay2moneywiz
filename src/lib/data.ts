@@ -324,7 +324,6 @@ export function calculateYearlyStats(
         const ownerName = getOwnerName(ownerId);
         // Check both owner fields for backward compatibility
         if (t.owner !== ownerName && t["账单人"] !== ownerName) {
-          console.log("Skipping transaction:", t);
           return;
         }
       }
@@ -449,13 +448,15 @@ export function getAvailableMonths(year: number, ownerId?: string): number[] {
       )
       .map((f) => parseInt(f.replace(".csv", "")))
       .filter((month) => !isNaN(month));
-
     // If owner filter is provided, check each month's transactions
     if (ownerId) {
       const ownerName = getOwnerName(ownerId);
       months = months.filter((month) => {
         try {
-          const filePath = path.join(dataDir, `${month}.csv`);
+          const filePath = path.join(
+            dataDir,
+            `${String(month).padStart(2, "0")}.csv`,
+          );
           const transactions = readCSV(filePath);
           return transactions.some((t) => t.owner === ownerName);
         } catch (error) {
