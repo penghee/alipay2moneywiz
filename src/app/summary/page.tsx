@@ -29,12 +29,21 @@ interface SankeyLink {
   value: number;
 }
 
+interface YearlyStats {
+  totalExpense: number;
+  monthlyData: Array<{
+    month: number;
+    expense: number;
+  }>;
+}
+
 interface SummaryData {
   totalAssets: number;
   totalLiabilities: number;
   netWorth: number;
   investmentAssets: number;
-  annualExpenses: number;
+  annualExpenses?: number;
+  yearStats?: YearlyStats;
   sankeyData: {
     nodes: SankeyNode[];
     links: SankeyLink[];
@@ -83,34 +92,63 @@ export default function SummaryPage() {
     }
   }, []);
 
+  // Calculate annual expenses from yearly stats
+  const calculateAnnualExpenses = (yearStats?: YearlyStats): number => {
+    if (
+      !yearStats ||
+      !yearStats.monthlyData ||
+      yearStats.monthlyData.length === 0
+    ) {
+      return 240000; // Default fallback value (20,000 per month * 12)
+    }
+    const averageMonthlyExpense =
+      yearStats.totalExpense / yearStats.monthlyData.length;
+    return averageMonthlyExpense * 12;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [summaryRes, incomeRes] = await Promise.all([
+        const currentYear = new Date().getFullYear();
+
+        // Fetch all data in parallel
+        const [summaryRes, incomeRes, yearRes] = await Promise.all([
           fetch("/api/summary"),
           fetch("/api/income/latest"),
+          fetch(`/api/stats/yearly/${currentYear}`),
         ]);
 
         if (!summaryRes.ok) throw new Error("Failed to fetch summary data");
         if (!incomeRes.ok) throw new Error("Failed to fetch income data");
 
-        const [summaryData, incomeData] = await Promise.all([
+        const [summaryData, incomeData, yearData] = await Promise.all([
           summaryRes.json(),
           incomeRes.json(),
+          yearRes.ok ? yearRes.json() : Promise.resolve(null),
         ]);
 
-        setData(summaryData);
+        // Calculate annual expenses from year data
+        const annualExpenses = calculateAnnualExpenses(yearData);
+
+        // Update summary data with calculated annual expenses
+        const updatedSummaryData = {
+          ...summaryData,
+          annualExpenses,
+          yearStats: yearData,
+        };
+
+        setData(updatedSummaryData);
 
         // Calculate debt service ratio if we have credit card debt and income
         const creditCardDebt = summaryData.creditCardDebt || 0;
         const monthlyIncome = incomeData.data.amount || 0;
 
         setLatestIncome(monthlyIncome);
-
         if (monthlyIncome > 0) {
-          const ratio = creditCardDebt / monthlyIncome;
-          setDebtServiceRatio(ratio);
+          // Assuming minimum payment is 10% of the balance
+          const monthlyPayment = creditCardDebt * 0.1;
+          setDebtServiceRatio((monthlyPayment / monthlyIncome) * 100);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
@@ -119,11 +157,8 @@ export default function SummaryPage() {
       }
     };
 
-    const loadAllData = async () => {
-      await Promise.all([fetchData(), fetchAssets()]);
-    };
-
-    loadAllData().finally(() => setLoading(false));
+    fetchData();
+    fetchAssets();
   }, []);
 
   const handleSaveAssets = async (updatedAssets: Asset[]) => {
@@ -578,7 +613,7 @@ export default function SummaryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">
-                {data.annualExpenses > 0
+                {data.annualExpenses && data.annualExpenses > 0
                   ? (
                       ((data.investmentAssets * 0.08) / data.annualExpenses) *
                       100
@@ -590,19 +625,26 @@ export default function SummaryPage() {
                   <div
                     className="bg-emerald-500 h-2 rounded-full"
                     style={{
-                      width: `${data.annualExpenses > 0 ? Math.min(100, ((data.investmentAssets * 0.08) / data.annualExpenses) * 100) : 0}%`,
+                      width: `${data.annualExpenses && data.annualExpenses > 0 ? Math.min(100, ((data.investmentAssets * 0.08) / data.annualExpenses) * 100) : 0}%`,
                     }}
                   ></div>
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
-                  {data.annualExpenses > 0 && (
+                  {data.annualExpenses && data.annualExpenses > 0 ? (
                     <>
                       {(data.investmentAssets * 0.08) / data.annualExpenses >= 1
                         ? "财务自由"
                         : "努力中"}
                       <span className="ml-2">(目标 100%)</span>
                     </>
-                  )}
+                  ) : null}
+                  {/* 平均年支出 */}
+                  {data.annualExpenses && data.annualExpenses > 0 ? (
+                    <span className="ml-2">
+                      {data.annualExpenses.toFixed(2)}
+                      <span className="ml-2">(平均年支出)</span>
+                    </span>
+                  ) : null}
                 </p>
               </div>
             </CardContent>
