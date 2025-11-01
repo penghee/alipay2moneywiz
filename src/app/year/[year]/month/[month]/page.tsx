@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -10,7 +10,9 @@ import {
   PieChart,
   BarChart3,
   Filter,
+  User,
 } from "lucide-react";
+import ownersData from "@/config/bill_owners.json";
 import {
   PieChart as RechartsPieChart,
   Pie,
@@ -81,8 +83,14 @@ export default function MonthPage({
   const [prevYearData, setPrevYearData] = useState<
     Record<string, CategoryStats>
   >({});
+  const [selectedOwner, setSelectedOwner] = useState<string>("all");
 
   const router = useRouter();
+
+  const owners = useMemo(
+    () => [{ id: "all", name: "全部" }, ...ownersData.owners],
+    [],
+  );
 
   // Type for the monthly API response
   interface MonthlyApiResponse {
@@ -107,18 +115,28 @@ export default function MonthPage({
         setYear(yearNum);
         setMonth(monthNum);
 
+        // Build query parameters
+        const queryParams = new URLSearchParams();
+        if (selectedOwner !== "all") {
+          queryParams.append("owner", selectedOwner);
+        }
+        const queryString = queryParams.toString();
+        const urlSuffix = queryString ? `?${queryString}` : "";
+
         const [currentMonthRes, prevMonthRes, prevYearRes] = await Promise.all([
-          fetch(`/api/stats/monthly/${yearNum}/${monthNum}`),
+          fetch(`/api/stats/monthly/${yearNum}/${monthNum}${urlSuffix}`),
           // Get previous month's data
           fetch(
             `/api/stats/monthly/${
               monthNum === 1 ? yearNum - 1 : yearNum
-            }/${monthNum === 1 ? 12 : monthNum - 1}`,
+            }/${monthNum === 1 ? 12 : monthNum - 1}${urlSuffix}`,
           ).then((res) =>
             res.ok ? res.json() : {},
           ) as Promise<MonthlyApiResponse>,
           // Get same month last year's data
-          fetch(`/api/stats/monthly/${yearNum - 1}/${monthNum}`).then((res) =>
+          fetch(
+            `/api/stats/monthly/${yearNum - 1}/${monthNum}${urlSuffix}`,
+          ).then((res) =>
             res.ok ? res.json() : {},
           ) as Promise<MonthlyApiResponse>,
         ]);
@@ -148,7 +166,7 @@ export default function MonthPage({
     };
 
     fetchData();
-  }, [params]);
+  }, [params, selectedOwner]);
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat("zh-CN", {
@@ -231,6 +249,20 @@ export default function MonthPage({
             <h1 className="text-3xl font-bold text-gray-900">
               {year || "未知"}年{month || "未知"}月 财务统计
             </h1>
+            <div className="flex items-center space-x-2 ml-4">
+              <User className="h-5 w-5 text-gray-500" />
+              <select
+                value={selectedOwner}
+                onChange={(e) => setSelectedOwner(e.target.value)}
+                className="w-32 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {owners.map((owner) => (
+                  <option key={owner.id} value={owner.id}>
+                    {owner.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 

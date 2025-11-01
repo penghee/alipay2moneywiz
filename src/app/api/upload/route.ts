@@ -158,13 +158,7 @@ async function processAlipay(
     transaction["账单人"] = owner;
     transactions.push(transaction);
   }
-
-  // 从第一条记录获取年月信息
-  const firstDate = new Date(transactions[0]["日期"]);
-  const year = firstDate.getFullYear();
-  const month = firstDate.getMonth() + 1;
-
-  return { transactions, year, month };
+  return { transactions };
 }
 
 // 处理微信账单
@@ -251,15 +245,58 @@ function processWechat(
     transactions.push(transaction);
   }
 
-  // 从第一条记录获取年月信息
-  const firstDate = new Date(transactions[0]["日期"]);
-  const year = firstDate.getFullYear();
-  const month = firstDate.getMonth() + 1;
-
-  return { transactions, year, month };
+  return { transactions };
 }
 
-// 保存数据
+// 按月份分组并保存交易数据
+function saveTransactionsByMonth(
+  transactions: Record<string, string>[],
+  platform: string,
+  owner: string,
+) {
+  // 按年月分组交易
+  const transactionsByMonth: Record<
+    string,
+    Record<string, Record<string, string>[]>
+  > = {};
+
+  // 遍历所有交易，按年月分组
+  for (const transaction of transactions) {
+    const date = new Date(transaction["日期"]);
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+
+    if (!transactionsByMonth[year]) {
+      transactionsByMonth[year] = {};
+    }
+    if (!transactionsByMonth[year][month]) {
+      transactionsByMonth[year][month] = [];
+    }
+
+    transactionsByMonth[year][month].push(transaction);
+  }
+
+  // 保存每个月的交易
+  const savedFiles: Array<{ filepath: string; count: number }> = [];
+  for (const [year, months] of Object.entries(transactionsByMonth)) {
+    for (const [month, monthlyTransactions] of Object.entries(months)) {
+      if (monthlyTransactions.length > 0) {
+        const savedFile = saveData(
+          monthlyTransactions,
+          parseInt(year),
+          parseInt(month),
+          platform,
+          owner,
+        );
+        savedFiles.push(savedFile);
+      }
+    }
+  }
+
+  return savedFiles;
+}
+
+// 保存数据到指定年月
 function saveData(
   transactions: Record<string, string>[],
   year: number,
@@ -422,30 +459,32 @@ export async function POST(request: NextRequest) {
     const { accountMap, categoryMap } = loadMaps();
 
     let transactions: Record<string, string>[] = [];
-    let outputPath = null;
+    const outputPath = null;
     if (platform === "alipay") {
       // 处理支付宝 CSV 文件
       console.log("Processing Alipay CSV file...");
       const content = await file.text();
       console.log("File content length:", content.length);
-      const {
-        transactions: alipayTransactions,
-        year,
-        month,
-      } = await processAlipay(file, accountMap, categoryMap, owner);
-      outputPath = saveData(alipayTransactions, year, month, "alipay", owner);
+      const { transactions: alipayTransactions } = await processAlipay(
+        file,
+        accountMap,
+        categoryMap,
+        owner,
+      );
+      await saveTransactionsByMonth(alipayTransactions, "alipay", owner);
       transactions = [...transactions, ...alipayTransactions];
     } else if (platform === "wechat") {
       // 处理微信 XLSX 文件
       console.log("Processing Wechat XLSX file...");
       const buffer = Buffer.from(await file.arrayBuffer());
       console.log("File buffer length:", buffer.length);
-      const {
-        transactions: wechatTransactions,
-        year,
-        month,
-      } = processWechat(buffer, accountMap, categoryMap, owner);
-      outputPath = saveData(wechatTransactions, year, month, "wechat", owner);
+      const { transactions: wechatTransactions } = processWechat(
+        buffer,
+        accountMap,
+        categoryMap,
+        owner,
+      );
+      await saveTransactionsByMonth(wechatTransactions, "wechat", owner);
       transactions = [...transactions, ...wechatTransactions];
     }
 
@@ -456,18 +495,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 从第一条记录获取年月信息
-    const firstDate = new Date(transactions[0]["日期"]);
-    const year = firstDate.getFullYear();
-    const month = firstDate.getMonth() + 1;
-
     return NextResponse.json({
       success: true,
       message: `成功导入 ${transactions.length} 条记录`,
       records: transactions.length,
-      year,
-      month,
-      outputPath: outputPath?.filepath || "",
     });
   } catch (error) {
     console.error("Upload error:", error);

@@ -416,8 +416,16 @@ export default function SummaryPage() {
           <Card className="bg-white shadow-sm hover:shadow-md transition-shadow border-l-4 border-purple-500">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-gray-500">
+                <CardTitle className="flex items-center text-sm font-medium text-gray-500">
                   投资资产比率
+                  <div className="ml-1 group relative">
+                    <span className="text-xs text-gray-400 cursor-help">ⓘ</span>
+                    <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 text-xs text-gray-700 bg-white rounded shadow-lg border border-gray-200 z-10">
+                      投资资产比率 = (投资资产 / 总资产) * 100%
+                      <br />
+                      50% 为健康区间，表示您的投资资产占总资产的 50%。
+                    </div>
+                  </div>
                 </CardTitle>
                 <div className="p-2 rounded-full bg-purple-100">
                   <svg
@@ -469,8 +477,16 @@ export default function SummaryPage() {
           <Card className="bg-white shadow-sm hover:shadow-md transition-shadow border-l-4 border-rose-500">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-gray-500">
+                <CardTitle className="flex items-center text-sm font-medium text-gray-500">
                   资产负债率
+                  <div className="ml-1 group relative">
+                    <span className="text-xs text-gray-400 cursor-help">ⓘ</span>
+                    <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 text-xs text-gray-700 bg-white rounded shadow-lg border border-gray-200 z-10">
+                      资产负债率 = (总负债 / 总资产) * 100%
+                      <br />
+                      30% 为健康区间，表示您的负债水平较低。
+                    </div>
+                  </div>
                 </CardTitle>
                 <div className="p-2 rounded-full bg-rose-100">
                   <svg
@@ -532,8 +548,16 @@ export default function SummaryPage() {
           <Card className="bg-white shadow-sm hover:shadow-md transition-shadow border-l-4 border-emerald-500">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-gray-500">
+                <CardTitle className="flex items-center text-sm font-medium text-gray-500">
                   财务自由度
+                  <div className="ml-1 group relative">
+                    <span className="text-xs text-gray-400 cursor-help">ⓘ</span>
+                    <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 text-xs text-gray-700 bg-white rounded shadow-lg border border-gray-200 z-10">
+                      财务自由度 = (投资资产 * 0.08) / 年均支出
+                      <br />
+                      100% 为财务自由，表示您的投资收益可以支撑您的生活支出。
+                    </div>
+                  </div>
                 </CardTitle>
                 <div className="p-2 rounded-full bg-emerald-100">
                   <svg
@@ -589,8 +613,18 @@ export default function SummaryPage() {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-sm font-medium text-gray-500">
+                  <CardTitle className="flex items-center text-sm font-medium text-gray-500">
                     清偿比率
+                    <div className="ml-1 group relative">
+                      <span className="text-xs text-gray-400 cursor-help">
+                        ⓘ
+                      </span>
+                      <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 text-xs text-gray-700 bg-white rounded shadow-lg border border-gray-200 z-10">
+                        清偿比率 = 净资产 / 总资产
+                        <br />
+                        70% 为健康区间，表示您的净资产可以支撑 70% 的总资产。
+                      </div>
+                    </div>
                   </CardTitle>
                   <p className="text-xs text-gray-400 mt-1">净资产 / 总资产</p>
                 </div>

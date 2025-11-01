@@ -112,6 +112,10 @@ export default function FinancialOverview() {
     (sum, item) => (item.salary > 0 ? sum + item.salary : sum),
     0,
   );
+  const totalIncome = data.reduce(
+    (sum, item) => (item.income > 0 ? sum + item.income : sum),
+    0,
+  );
   const totalBalance = data.reduce((sum, item) => sum + item.balance, 0);
 
   if (loading) {
@@ -145,9 +149,12 @@ export default function FinancialOverview() {
           </p>
         </div>
         <div className="bg-green-50 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-green-800">总收入(工资)</h3>
+          <h3 className="text-sm font-medium text-green-800">总收入</h3>
           <p className="text-2xl font-bold text-green-600">
-            ¥{totalSalary.toLocaleString()}
+            ¥{totalIncome.toLocaleString()}
+          </p>
+          <p className="text-sm text-green-600">
+            (工资: ¥{totalSalary.toLocaleString()})
           </p>
         </div>
         <div className="bg-blue-50 p-4 rounded-lg">
@@ -191,9 +198,19 @@ export default function FinancialOverview() {
                 <Cell key={`cell-expense-${index}`} fill={COLORS.expense} />
               ))}
             </Bar>
-            <Bar
+            {/* <Bar
               dataKey="salary"
               name="工资收入"
+              fill={COLORS.salary}
+              radius={[4, 4, 0, 0]}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-salary-${index}`} fill={COLORS.salary} />
+              ))}
+            </Bar> */}
+            <Bar
+              dataKey="income"
+              name="收入"
               fill={COLORS.salary}
               radius={[4, 4, 0, 0]}
             >

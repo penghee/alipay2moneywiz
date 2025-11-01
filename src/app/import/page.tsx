@@ -1,9 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Upload, CheckCircle, AlertCircle, FileText, Calendar } from 'lucide-react';
-import FileUpload from '@/components/FileUpload';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  Upload,
+  CheckCircle,
+  AlertCircle,
+  FileText,
+  Calendar,
+} from "lucide-react";
+import FileUpload from "@/components/FileUpload";
 
 interface BillOwner {
   id: string;
@@ -25,28 +32,31 @@ interface UploadResult {
 }
 
 export default function ImportPage() {
-  const [billOwners, setBillOwners] = useState<BillOwnersData>({ defaultOwner: '爸爸', owners: [] });
+  const [billOwners, setBillOwners] = useState<BillOwnersData>({
+    defaultOwner: "爸爸",
+    owners: [],
+  });
 
   useEffect(() => {
     // Load bill owners data
     const loadBillOwners = async () => {
       try {
         // Use dynamic import for the JSON file
-        const billOwnersData = await import('@/config/bill_owners.json');
+        const billOwnersData = await import("@/config/bill_owners.json");
         setBillOwners({
-          defaultOwner: billOwnersData.owners[0]?.id || 'father', // Fallback to 'father' if no owners
-          owners: billOwnersData.owners
+          defaultOwner: billOwnersData.owners[0]?.id || "father", // Fallback to 'father' if no owners
+          owners: billOwnersData.owners,
         });
       } catch (error) {
-        console.error('Failed to load bill owners:', error);
+        console.error("Failed to load bill owners:", error);
         // Fallback to default values if loading fails
         setBillOwners({
-          defaultOwner: '爸爸',
+          defaultOwner: "爸爸",
           owners: [
-            { id: 'father', name: '爸爸' },
-            { id: 'mother', name: '妈妈' },
-            { id: 'zhaozhao', name: '昭昭' }
-          ]
+            { id: "father", name: "爸爸" },
+            { id: "mother", name: "妈妈" },
+            { id: "zhaozhao", name: "昭昭" },
+          ],
         });
       }
     };
@@ -65,12 +75,12 @@ export default function ImportPage() {
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('platform', platform);
-      formData.append('owner', owner);
+      formData.append("file", file);
+      formData.append("platform", platform);
+      formData.append("owner", owner);
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
+      const response = await fetch("/api/upload", {
+        method: "POST",
         body: formData,
       });
 
@@ -79,11 +89,11 @@ export default function ImportPage() {
       if (response.ok) {
         setResult(data);
       } else {
-        setError(data.error || '上传失败');
+        setError(data.error || "上传失败");
       }
     } catch (err) {
-      setError('网络错误，请重试');
-      console.error('Upload error:', err);
+      setError("网络错误，请重试");
+      console.error("Upload error:", err);
     } finally {
       setLoading(false);
     }
@@ -112,12 +122,10 @@ export default function ImportPage() {
             <ArrowLeft className="h-5 w-5" />
             <span>返回</span>
           </button>
-          
+
           <div className="flex items-center space-x-3">
             <Upload className="h-8 w-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-gray-900">
-              导入账单文件
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-900">导入账单文件</h1>
           </div>
         </div>
 
@@ -130,7 +138,7 @@ export default function ImportPage() {
                 导入成功！
               </h3>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="bg-white rounded-lg p-4">
                 <div className="flex items-center">
@@ -139,30 +147,6 @@ export default function ImportPage() {
                     <p className="text-sm text-gray-600">导入记录</p>
                     <p className="text-lg font-semibold text-gray-900">
                       {result.records} 条
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg p-4">
-                <div className="flex items-center">
-                  <Calendar className="h-5 w-5 text-green-600 mr-2" />
-                  <div>
-                    <p className="text-sm text-gray-600">数据时间</p>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {result.year}年{result.month}月
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg p-4">
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-purple-600 mr-2" />
-                  <div>
-                    <p className="text-sm text-gray-600">存储位置</p>
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {result.outputPath?.split('/').pop()}
                     </p>
                   </div>
                 </div>
@@ -194,9 +178,7 @@ export default function ImportPage() {
             <div className="flex items-center">
               <AlertCircle className="h-6 w-6 text-red-600 mr-3" />
               <div>
-                <h3 className="text-lg font-semibold text-red-800">
-                  导入失败
-                </h3>
+                <h3 className="text-lg font-semibold text-red-800">导入失败</h3>
                 <p className="text-red-700 mt-1">{error}</p>
               </div>
             </div>
@@ -204,8 +186,8 @@ export default function ImportPage() {
         )}
 
         {/* 文件上传组件 */}
-        <FileUpload 
-          onUpload={handleUpload} 
+        <FileUpload
+          onUpload={handleUpload}
           loading={loading}
           owners={billOwners.owners}
           defaultOwner={billOwners.defaultOwner}
@@ -217,7 +199,7 @@ export default function ImportPage() {
             <FileText className="h-5 w-5 mr-2" />
             导入说明
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-medium text-gray-900 mb-2">支付宝账单</h4>
@@ -228,7 +210,7 @@ export default function ImportPage() {
                 <li>• 智能分类和账户映射</li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-medium text-gray-900 mb-2">微信账单</h4>
               <ul className="text-sm text-gray-600 space-y-1">

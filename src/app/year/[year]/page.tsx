@@ -292,7 +292,7 @@ export default function YearPage({
             <span>返回</span>
           </button>
 
-          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-3">
               <Calendar className="h-8 w-8 text-blue-600" />
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
@@ -346,7 +346,17 @@ export default function YearPage({
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">结余</p>
+                <div className="flex items-center text-sm font-medium text-gray-600">
+                  <span>结余</span>
+                  <div className="ml-1 group relative">
+                    <span className="text-xs text-gray-400 cursor-help">ⓘ</span>
+                    <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 text-xs text-gray-700 bg-white rounded shadow-lg border border-gray-200 z-10">
+                      结余 = 总收入 - 总支出
+                      <br />
+                      正数表示结余，负数表示赤字。
+                    </div>
+                  </div>
+                </div>
                 <p
                   className={`text-2xl font-bold ${stats.totalBalance >= 0 ? "text-green-600" : "text-red-600"}`}
                 >
@@ -398,58 +408,62 @@ export default function YearPage({
           </div>
 
           {/* 平均月支出 */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">平均月支出</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  ¥{formatMoney(averageMonthlyExpense)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  共 {stats.monthlyData.length} 个月数据
-                </p>
-                {averageMonthlyExpense > 0 && (
-                  <div className="mt-2 pt-2 border-t border-gray-100">
-                    <div className="flex items-center">
-                      <p className="text-xs font-medium text-gray-600">
-                        流动性覆盖率
-                      </p>
-                      <div className="ml-1 group relative">
-                        <span className="text-xs text-gray-400 cursor-help">
-                          ⓘ
-                        </span>
-                        <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 text-xs text-gray-700 bg-white rounded shadow-lg border border-gray-200 z-10">
-                          流动性资产 / 月均支出 (安全垫)
-                          <br />
-                          3-6个月为健康区间，表示您的应急资金可以支撑3-6个月的正常生活。
+          {selectedOwner === "all" && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">
+                    平均月支出
+                  </p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    ¥{formatMoney(averageMonthlyExpense)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    共 {stats.monthlyData.length} 个月数据
+                  </p>
+                  {averageMonthlyExpense > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <div className="flex items-center">
+                        <p className="text-xs font-medium text-gray-600">
+                          流动性覆盖率
+                        </p>
+                        <div className="ml-1 group relative">
+                          <span className="text-xs text-gray-400 cursor-help">
+                            ⓘ
+                          </span>
+                          <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 text-xs text-gray-700 bg-white rounded shadow-lg border border-gray-200 z-10">
+                            流动性资产 / 月均支出 (安全垫)
+                            <br />
+                            3-6个月为健康区间，表示您的应急资金可以支撑3-6个月的正常生活。
+                          </div>
                         </div>
                       </div>
+                      <p
+                        className={`text-sm font-medium ${
+                          liquidityRatio < 3
+                            ? "text-red-600"
+                            : liquidityRatio <= 6
+                              ? "text-yellow-600"
+                              : "text-green-600"
+                        }`}
+                      >
+                        {liquidityRatio.toFixed(1)} 个月(¥
+                        {formatMoney(cashAssets)})
+                        <span className="text-xs ml-1 text-gray-500">
+                          {liquidityRatio < 3
+                            ? " (需增加应急储备)"
+                            : liquidityRatio <= 6
+                              ? " (健康)"
+                              : " (充足)"}
+                        </span>
+                      </p>
                     </div>
-                    <p
-                      className={`text-sm font-medium ${
-                        liquidityRatio < 3
-                          ? "text-red-600"
-                          : liquidityRatio <= 6
-                            ? "text-yellow-600"
-                            : "text-green-600"
-                      }`}
-                    >
-                      {liquidityRatio.toFixed(1)} 个月(¥
-                      {formatMoney(cashAssets)})
-                      <span className="text-xs ml-1 text-gray-500">
-                        {liquidityRatio < 3
-                          ? " (需增加应急储备)"
-                          : liquidityRatio <= 6
-                            ? " (健康)"
-                            : " (充足)"}
-                      </span>
-                    </p>
-                  </div>
-                )}
+                  )}
+                </div>
+                <BarChart3 className="h-8 w-8 text-purple-600" />
               </div>
-              <BarChart3 className="h-8 w-8 text-purple-600" />
             </div>
-          </div>
+          )}
           {/* 平均月收入 */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
@@ -467,38 +481,42 @@ export default function YearPage({
           </div>
 
           {/* 预算概览 */}
-          <div
-            className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => router.push(`/year/${year}/budget`)}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center">
-                  <p className="text-sm font-medium text-gray-600">年度预算</p>
-                  <span className="ml-2 text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">
-                    {totalBudget > 0
-                      ? `${((budgetUsed / totalBudget) * 100).toFixed(2)}%`
-                      : "0.00%"}
-                  </span>
+          {selectedOwner === "all" && (
+            <div
+              className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push(`/year/${year}/budget`)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center">
+                    <p className="text-sm font-medium text-gray-600">
+                      年度预算
+                    </p>
+                    <span className="ml-2 text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">
+                      {totalBudget > 0
+                        ? `${((budgetUsed / totalBudget) * 100).toFixed(2)}%`
+                        : "0.00%"}
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-600">
+                    ¥{formatMoney(totalBudget)}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    已用: ¥{formatMoney(budgetUsed)}
+                  </p>
                 </div>
-                <p className="text-2xl font-bold text-blue-600">
-                  ¥{formatMoney(totalBudget)}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  已用: ¥{formatMoney(budgetUsed)}
-                </p>
+                <Wallet className="h-8 w-8 text-blue-600" />
               </div>
-              <Wallet className="h-8 w-8 text-blue-600" />
+              <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full"
+                  style={{
+                    width: `${totalBudget > 0 ? Math.min(100, (budgetUsed / totalBudget) * 100) : 0}%`,
+                  }}
+                ></div>
+              </div>
             </div>
-            <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full"
-                style={{
-                  width: `${totalBudget > 0 ? Math.min(100, (budgetUsed / totalBudget) * 100) : 0}%`,
-                }}
-              ></div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Monthly Trend Charts */}
