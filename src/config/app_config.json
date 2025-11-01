@@ -1,0 +1,34 @@
+{
+  "expenseThreshold": {
+    "default": 100,
+    "min": 0,
+    "max": 10000,
+    "step": 10
+  },
+  "spendingAnalysis": {
+    "singleTransactionThreshold": {
+      "default": 5000,
+      "min": 0,
+      "max": 100000,
+      "step": 100
+    },
+    "monthlyIncreaseThreshold": {
+      "default": 50,
+      "min": 0,
+      "max": 1000,
+      "step": 5
+    },
+    "yearlyIncreaseThreshold": {
+      "default": 30,
+      "min": 0,
+      "max": 1000,
+      "step": 5
+    },
+    "budgetUsageThreshold": {
+      "default": 90,
+      "min": 0,
+      "max": 1000,
+      "step": 5
+    }
+  }
+}
