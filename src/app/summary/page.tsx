@@ -62,6 +62,14 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
+const formatPercentage = (value: number) => {
+  return new Intl.NumberFormat("zh-CN", {
+    style: "percent",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
 // Dynamically import the Sankey component with no SSR
 const SankeyChart = dynamic(() => import("@/components/charts/SankeyChart"), {
   ssr: false,
@@ -520,7 +528,7 @@ export default function SummaryPage() {
                               : "text-red-600"
                         }
                       >
-                        {`${(debtServiceRatio * 100).toFixed(2)}%`}
+                        {formatPercentage(debtServiceRatio)}
                       </span>
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
@@ -535,7 +543,7 @@ export default function SummaryPage() {
               {longTermDebt !== null && (
                 <div className="mt-2">
                   <p className="text-sm font-medium">
-                    长期负债率: {`${longTermDebt.toFixed(4)}%`}
+                    长期负债率: {formatPercentage(longTermDebt)}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     {longTermDebt < 0.4
@@ -587,9 +595,7 @@ export default function SummaryPage() {
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">
                 {data.totalAssets > 0
-                  ? ((data.investmentAssets / data.totalAssets) * 100).toFixed(
-                      1,
-                    ) + "%"
+                  ? formatPercentage(data.investmentAssets / data.totalAssets)
                   : "N/A"}
               </div>
               <div className="mt-2">
@@ -648,9 +654,7 @@ export default function SummaryPage() {
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">
                 {data.totalAssets > 0
-                  ? ((data.totalLiabilities / data.totalAssets) * 100).toFixed(
-                      1,
-                    ) + "%"
+                  ? formatPercentage(data.totalLiabilities / data.totalAssets)
                   : "N/A"}
               </div>
               <div className="mt-2">
@@ -719,10 +723,9 @@ export default function SummaryPage() {
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">
                 {data.annualExpenses && data.annualExpenses > 0
-                  ? (
-                      ((data.investmentAssets * 0.08) / data.annualExpenses) *
-                      100
-                    ).toFixed(1) + "%"
+                  ? formatPercentage(
+                      (data.investmentAssets * 0.08) / data.annualExpenses,
+                    )
                   : "N/A"}
               </div>
               <div className="mt-2">
@@ -799,7 +802,10 @@ export default function SummaryPage() {
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">
                 {data.totalAssets > 0
-                  ? `${(((data.totalAssets - data.totalLiabilities) / data.totalAssets) * 100).toFixed(1)}%`
+                  ? formatPercentage(
+                      (data.totalAssets - data.totalLiabilities) /
+                        data.totalAssets,
+                    )
                   : "N/A"}
               </div>
               <div className="mt-2">
