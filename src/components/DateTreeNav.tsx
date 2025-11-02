@@ -6,13 +6,13 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, ChevronRight, Calendar } from "lucide-react";
 
 interface YearData {
-  year: string;
-  months: string[];
+  year: number;
+  months: number[];
 }
 
 export default function DateTreeNav() {
   const [years, setYears] = useState<YearData[]>([]);
-  const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set());
+  const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
 
@@ -55,7 +55,7 @@ export default function DateTreeNav() {
 
         // Expand current year by default if we have data
         if (yearsWithMonths.length > 0) {
-          const currentYear = new Date().getFullYear().toString();
+          const currentYear = new Date().getFullYear();
           if (yearsWithMonths.some((y) => y.year === currentYear)) {
             setExpandedYears(new Set([currentYear]));
           } else {
@@ -74,7 +74,7 @@ export default function DateTreeNav() {
     fetchData();
   }, []);
 
-  const toggleYear = (year: string) => {
+  const toggleYear = (year: number) => {
     setExpandedYears((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(year)) {
@@ -114,6 +114,26 @@ export default function DateTreeNav() {
 
           {expandedYears.has(year) && (
             <div className="ml-6 mt-1 space-y-0.5">
+              {/* 全年 */}
+              <Link
+                href={`/year/${year}`}
+                className={`block px-4 py-1 hover:bg-gray-700 rounded-md ${
+                  pathname === `/${year}` ? "text-blue-400" : "text-gray-400"
+                }`}
+              >
+                全年流水
+              </Link>
+              {/* 全年预算 */}
+              <Link
+                href={`/year/${year}/budget`}
+                className={`block px-4 py-1 hover:bg-gray-700 rounded-md ${
+                  pathname === `/${year}/budget`
+                    ? "text-blue-400"
+                    : "text-gray-400"
+                }`}
+              >
+                全年预算
+              </Link>
               {months.map((month: string | number) => {
                 // Convert month to string and ensure it's 2 digits
                 const monthStr = String(month);
@@ -122,7 +142,7 @@ export default function DateTreeNav() {
                 const isActive =
                   pathname === `/year/${year}/month/${monthNum}` ||
                   (pathname === "/" &&
-                    new Date().getFullYear().toString() === year &&
+                    new Date().getFullYear() === year &&
                     (new Date().getMonth() + 1).toString().padStart(2, "0") ===
                       monthNum);
 
