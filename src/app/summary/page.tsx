@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FinancialNumber } from "@/components/FinancialNumber";
 import { Asset } from "@/lib/types/asset";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
@@ -40,6 +41,7 @@ interface YearlyStats {
 interface SummaryData {
   totalAssets: number;
   totalLiabilities: number;
+  creditCardDebt: number;
   netWorth: number;
   investmentAssets: number;
   annualExpenses?: number;
@@ -74,10 +76,11 @@ export default function SummaryPage() {
   const [data, setData] = useState<SummaryData | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [debtServiceRatio, setDebtServiceRatio] = useState<number | null>(null);
-  const [latestIncome, setLatestIncome] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // const [debtServiceRatio, setDebtServiceRatio] = useState<number | null>(null);
+  const [latestIncome, setLatestIncome] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showNumbers, setShowNumbers] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const fetchAssets = useCallback(async () => {
@@ -109,7 +112,7 @@ export default function SummaryPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
+        setIsLoading(true);
         const currentYear = new Date().getFullYear();
 
         // Fetch all data in parallel
@@ -141,25 +144,39 @@ export default function SummaryPage() {
         setData(updatedSummaryData);
 
         // Calculate debt service ratio if we have credit card debt and income
-        const creditCardDebt = summaryData.creditCardDebt || 0;
+        // const totalLiabilities = summaryData.totalLiabilities || 0;
         const monthlyIncome = incomeData.data.amount || 0;
 
         setLatestIncome(monthlyIncome);
-        if (monthlyIncome > 0) {
-          // Assuming minimum payment is 10% of the balance
-          const monthlyPayment = creditCardDebt * 0.1;
-          setDebtServiceRatio((monthlyPayment / monthlyIncome) * 100);
-        }
+        // if (monthlyIncome > 0) {
+        //   setDebtServiceRatio(totalLiabilities / monthlyIncome);
+        // }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
     fetchData();
     fetchAssets();
   }, []);
+
+  // 短期信用卡负债
+  const debtServiceRatio = useMemo(() => {
+    if (!data || !data.creditCardDebt || !latestIncome) {
+      return null;
+    }
+    return data.creditCardDebt / latestIncome;
+  }, [data, latestIncome]);
+
+  // 长期负债
+  const longTermDebt = useMemo(() => {
+    if (!data || !data.totalLiabilities || !data.totalAssets) {
+      return null;
+    }
+    return data.totalLiabilities / data.totalAssets;
+  }, [data]);
 
   const handleSaveAssets = async (updatedAssets: Asset[]) => {
     try {
@@ -193,7 +210,7 @@ export default function SummaryPage() {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -330,10 +347,53 @@ export default function SummaryPage() {
         </div>
         <div className="flex space-x-2">
           <button
-            className="p-2 text-gray-400 hover:text-gray-500"
+            className="flex items-center p-2 text-gray-500 hover:text-gray-700"
+            title={showNumbers ? "隐藏数字" : "显示数字"}
+            onClick={() => setShowNumbers(!showNumbers)}
+          >
+            {showNumbers ? (
+              <>
+                <svg
+                  className="h-5 w-5 mr-1"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+                <span>隐藏数字</span>
+              </>
+            ) : (
+              <>
+                <svg
+                  className="h-5 w-5 mr-1"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                <span>显示数字</span>
+              </>
+            )}
+          </button>
+
+          <button
+            className="flex items-center p-2 text-gray-400 hover:text-gray-500"
             title="刷新数据"
             onClick={() => window.location.reload()}
           >
+            <p>刷新数据</p>
             <svg
               className="h-5 w-5"
               xmlns="http://www.w3.org/2000/svg"
@@ -367,7 +427,12 @@ export default function SummaryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">
-                {formatCurrency(data.totalAssets)}
+                {/* {showNumbers ? formatCurrency(data.totalAssets) : '******'} */}
+                <FinancialNumber
+                  value={data.totalAssets}
+                  showNumbers={showNumbers}
+                  formatValue={formatCurrency}
+                />
               </div>
               <p className="mt-1 text-xs text-gray-500">
                 {/* 较上月 <span className="text-green-600 font-medium">+2.5%</span> */}
@@ -389,7 +454,12 @@ export default function SummaryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">
-                {formatCurrency(data.netWorth)}
+                {/* {showNumbers ? formatCurrency(data.netWorth) : '******'} */}
+                <FinancialNumber
+                  value={data.netWorth}
+                  showNumbers={showNumbers}
+                  formatValue={formatCurrency}
+                />
               </div>
               <p className="mt-1 text-xs text-gray-500">
                 {/* 较上月 <span className="text-green-600 font-medium">+3.2%</span> */}
@@ -411,15 +481,36 @@ export default function SummaryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">
-                {formatCurrency(data.totalLiabilities)}
+                {/* {showNumbers ? formatCurrency(data.totalLiabilities) : '******'} */}
+                <FinancialNumber
+                  value={data.totalLiabilities}
+                  showNumbers={showNumbers}
+                  formatValue={formatCurrency}
+                />
               </div>
               {debtServiceRatio !== null &&
                 latestIncome &&
                 latestIncome > 0 && (
                   <div className="mt-2">
-                    <p>最新收入: {formatCurrency(latestIncome)}</p>
-                    <p className="text-sm font-medium">
-                      信用卡负债率:{" "}
+                    <p className="text-xs text-gray-500">
+                      最新收入:{" "}
+                      <FinancialNumber
+                        value={latestIncome}
+                        showNumbers={showNumbers}
+                        formatValue={formatCurrency}
+                      />
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      (信用卡负债:{" "}
+                      <FinancialNumber
+                        value={data.creditCardDebt}
+                        showNumbers={showNumbers}
+                        formatValue={formatCurrency}
+                      />
+                      )
+                    </p>
+                    <p className="text-sm font-medium mt-2">
+                      短期负债率:{" "}
                       <span
                         className={
                           debtServiceRatio < 0.3
@@ -429,7 +520,7 @@ export default function SummaryPage() {
                               : "text-red-600"
                         }
                       >
-                        {(debtServiceRatio * 100).toFixed(1)}%
+                        {`${(debtServiceRatio * 100).toFixed(2)}%`}
                       </span>
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
@@ -441,6 +532,20 @@ export default function SummaryPage() {
                     </p>
                   </div>
                 )}
+              {longTermDebt !== null && (
+                <div className="mt-2">
+                  <p className="text-sm font-medium">
+                    长期负债率: {`${longTermDebt.toFixed(4)}%`}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {longTermDebt < 0.4
+                      ? "轻松区"
+                      : longTermDebt <= 0.5
+                        ? "警戒区，申请新贷款较困难"
+                        : "危险区，影响生活质量"}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -641,7 +746,11 @@ export default function SummaryPage() {
                   {/* 平均年支出 */}
                   {data.annualExpenses && data.annualExpenses > 0 ? (
                     <span className="ml-2">
-                      {data.annualExpenses.toFixed(2)}
+                      <FinancialNumber
+                        value={data.annualExpenses}
+                        showNumbers={showNumbers}
+                        formatValue={formatCurrency}
+                      />
                       <span className="ml-2">(平均年支出)</span>
                     </span>
                   ) : null}
