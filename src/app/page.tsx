@@ -3,9 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Upload, List, TrendingUp, DollarSign } from "lucide-react";
+import {
+  Calendar,
+  Upload,
+  List,
+  TrendingUp,
+  DollarSign,
+  Info,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import dynamic from "next/dynamic";
+
+import { getCategoryColor, resetColorAssignment } from "@/lib/colors";
+import BudgetProgressBar from "@/components/BudgetProgressBar";
 
 // Dynamically import the FinancialOverview component with no SSR
 const FinancialOverview = dynamic(
@@ -15,26 +25,57 @@ const FinancialOverview = dynamic(
 
 export default function Home() {
   const [years, setYears] = useState<number[]>([]);
+  const [budgetProgress, setBudgetProgress] = useState<{
+    total: {
+      budget: number;
+      spent: number;
+      remaining: number;
+      percentage: number;
+      overBudget: boolean;
+    };
+    categories: Record<
+      string,
+      {
+        budget: number;
+        spent: number;
+        remaining: number;
+        percentage: number;
+        overBudget: boolean;
+      }
+    >;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const fetchYears = async () => {
+    resetColorAssignment();
+    const fetchData = async () => {
       try {
-        const response = await fetch("/api/years");
-        if (!response.ok) {
+        // 获取年份数据
+        const yearsResponse = await fetch("/api/years");
+        if (!yearsResponse.ok) {
           throw new Error("Failed to fetch years");
         }
-        const data = await response.json();
-        setYears(data.years);
+        const yearsData = await yearsResponse.json();
+        setYears(yearsData.years);
+
+        // 获取当前年份的预算数据
+        const currentYear = new Date().getFullYear();
+        const budgetResponse = await fetch(
+          `/api/budget/progress?year=${currentYear}`,
+        );
+        if (budgetResponse.ok) {
+          const budgetData = await budgetResponse.json();
+          setBudgetProgress(budgetData);
+        }
       } catch (error) {
-        console.error("Error loading years:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchYears();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -59,6 +100,17 @@ export default function Home() {
           <p className="text-gray-600">查看和管理您的财务数据</p>
         </header>
 
+        {budgetProgress && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              本年预算概览
+            </h2>
+            <BudgetProgressBar
+              budgetProgress={budgetProgress}
+              getCategoryColor={getCategoryColor}
+            />
+          </div>
+        )}
         {/* Financial Overview Section */}
         <section className="mb-12">
           <FinancialOverview />

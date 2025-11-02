@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -171,78 +171,42 @@ export default function FinancialOverview() {
       {/* Chart */}
       <div className="h-96 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            margin={{
-              top: 20,
-              right: 30,
-              left: 20,
-              bottom: 60,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="month" tick={<CustomizedAxisTick />} height={80} />
-            <YAxis
-              tickFormatter={(value) => `¥${value.toLocaleString()}`}
-              width={100}
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" />
+            <YAxis />
+            <Tooltip
+              formatter={(value: number, name: string) => [
+                `¥${value.toLocaleString()}`,
+                name === "income"
+                  ? "收入"
+                  : name === "expenses"
+                    ? "支出"
+                    : "结余",
+              ]}
             />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Bar
-              dataKey="expenses"
-              name="支出"
-              fill={COLORS.expense}
-              radius={[4, 4, 0, 0]}
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-expense-${index}`} fill={COLORS.expense} />
-              ))}
-            </Bar>
-            {/* <Bar
-              dataKey="salary"
-              name="工资收入"
-              fill={COLORS.salary}
-              radius={[4, 4, 0, 0]}
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-salary-${index}`} fill={COLORS.salary} />
-              ))}
-            </Bar> */}
-            <Bar
+            <Line
+              type="monotone"
               dataKey="income"
               name="收入"
-              fill={COLORS.salary}
-              radius={[4, 4, 0, 0]}
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-salary-${index}`} fill={COLORS.salary} />
-              ))}
-            </Bar>
-            <Bar
+              stroke="#10b981"
+              strokeWidth={2}
+            />
+            <Line
+              type="monotone"
+              dataKey="expenses"
+              name="支出"
+              stroke="#ef4444"
+              strokeWidth={2}
+            />
+            <Line
+              type="monotone"
               dataKey="balance"
               name="结余"
-              fill={COLORS.balance}
-              radius={[4, 4, 0, 0]}
-            >
-              {data.map((entry, index) => (
-                <Cell
-                  key={`cell-balance-${index}`}
-                  fill={entry.balance >= 0 ? COLORS.balance : COLORS.expense}
-                />
-              ))}
-              <LabelList
-                dataKey="balance"
-                position="top"
-                formatter={(value) => {
-                  const numValue = Number(value);
-                  return numValue >= 0
-                    ? "¥" + numValue.toLocaleString()
-                    : "-¥" + Math.abs(numValue).toLocaleString();
-                }}
-                style={{ fill: "#666", fontSize: "0.75rem" }}
-              />
-            </Bar>
-          </BarChart>
+              stroke="#3b82f6"
+              strokeWidth={2}
+            />
+          </LineChart>
         </ResponsiveContainer>
       </div>
     </div>
