@@ -4,5 +4,5 @@ export interface Expense {
   category: string;
   date: string; // ISO date string
   description: string;
-  // Add any other fields you have in your expense data
+  tags?: string; // Optional tags for categorizing expenses
 }

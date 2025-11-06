@@ -44,6 +44,9 @@ interface CategoryYearlyStats {
   topExpenses: TopExpense[];
 }
 
+// 固定分类
+const FIXED_CATEGORIES = ["住房", "交通", "医疗"];
+
 export default function CategoryPage({
   params,
 }: {
@@ -91,7 +94,7 @@ export default function CategoryPage({
           const data = await response.json();
           setStats(data);
           // 默认选择前5个分类
-          setSelectedCategories(new Set(data.categories.slice(0, 5)));
+          setSelectedCategories(new Set(FIXED_CATEGORIES));
         }
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -196,9 +199,6 @@ export default function CategoryPage({
     "#22c55e",
     "#eab308",
   ];
-
-  // 固定分类
-  const FIXED_CATEGORIES = ["住房", "交通", "医疗"];
 
   // 准备分类数据
   const prepareCategoryData = () => {
@@ -351,6 +351,11 @@ export default function CategoryPage({
                     <p className="text-sm font-medium text-gray-600">
                       {item.name}
                     </p>
+                    {item.type === "fixed" && (
+                      <p className="text-sm text-gray-500">
+                        ({FIXED_CATEGORIES.join(", ")})
+                      </p>
+                    )}
                     <p
                       className="text-2xl font-bold"
                       style={{ color: item.color }}
@@ -417,27 +422,54 @@ export default function CategoryPage({
             选择要显示的分类（当前已选 {selectedCategories.size} 个）
           </h3>
           <div className="flex flex-wrap gap-2">
-            {stats.categories.map((category, index) => (
-              <button
-                key={category}
-                onClick={() => toggleCategory(category)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedCategories.has(category)
-                    ? "text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-                style={{
-                  backgroundColor: selectedCategories.has(category)
-                    ? COLORS[index % COLORS.length]
-                    : undefined,
-                }}
-              >
-                {category}
-                <span className="ml-2 text-xs opacity-75">
-                  ¥{formatMoney(stats.totalByCategory[category].amount)}
-                </span>
-              </button>
-            ))}
+            {/* 固定支出 */}
+            {stats.categories
+              .filter((category) => FIXED_CATEGORIES.includes(category))
+              .map((category, index) => (
+                <button
+                  key={category}
+                  onClick={() => toggleCategory(category)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    selectedCategories.has(category)
+                      ? "text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                  style={{
+                    backgroundColor: selectedCategories.has(category)
+                      ? COLORS[index % COLORS.length]
+                      : undefined,
+                  }}
+                >
+                  {category}
+                  <span className="ml-2 text-xs opacity-75">
+                    ¥{formatMoney(stats.totalByCategory[category].amount)}
+                  </span>
+                </button>
+              ))}
+            {/* 可选支出 */}
+            {stats.categories
+              .filter((category) => !FIXED_CATEGORIES.includes(category))
+              .map((category, index) => (
+                <button
+                  key={category}
+                  onClick={() => toggleCategory(category)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    selectedCategories.has(category)
+                      ? "text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                  style={{
+                    backgroundColor: selectedCategories.has(category)
+                      ? COLORS[index % COLORS.length]
+                      : undefined,
+                  }}
+                >
+                  {category}
+                  <span className="ml-2 text-xs opacity-75">
+                    ¥{formatMoney(stats.totalByCategory[category].amount)}
+                  </span>
+                </button>
+              ))}
           </div>
         </div>
 
