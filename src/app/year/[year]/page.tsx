@@ -25,6 +25,12 @@ const ExpenseBreakdown = dynamic(
   () => import("@/components/ExpenseBreakdown"),
   { ssr: false },
 );
+
+const TagBreakdown = dynamic(
+  () => import("@/components/TaggedExpenseBreakdown"),
+  { ssr: false },
+);
+
 import {
   LineChart,
   Line,
@@ -789,6 +795,21 @@ export default function YearPage({
           ) : (
             <div className="text-center py-8 text-gray-500">
               暂无详细的交易数据用于阈值分析
+            </div>
+          )}
+
+          <div className="flex items-center justify-between mt-6">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Filter className="h-5 w-5 mr-2" />
+              标签分析
+            </h3>
+          </div>
+
+          {stats.expenses && stats.expenses.length > 0 ? (
+            <TagBreakdown expenses={stats.expenses} />
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              暂无详细的交易数据用于标签分析
             </div>
           )}
         </div>

@@ -121,7 +121,10 @@ async function processAlipay(
     transaction["日期"] = parseDate(record["交易时间"] || "");
     transaction["描述"] = record["商品说明"] || "";
     transaction["账户"] = mapAccount(record["收/付款方式"] || "", accountMap);
-
+    // 过滤描述包含亲情卡的记录
+    if (transaction["描述"].includes("亲情卡")) {
+      continue;
+    }
     if (record["收/支"] === "收入" || record["收/支"] === "支出") {
       transaction["交易对方"] = "";
       transaction["分类"] = mapCategory(
@@ -210,6 +213,10 @@ function processWechat(
     transaction["日期"] = parseDate(record["交易时间"] || "");
     transaction["描述"] = record["商品"] || "";
     transaction["账户"] = mapAccount(record["支付方式"] || "", accountMap);
+    // 过滤描述包含亲情卡的记录
+    if (transaction["描述"].includes("亲情卡")) {
+      continue;
+    }
 
     if (record["收/支"] === "收入" || record["收/支"] === "支出") {
       transaction["交易对方"] = "";

@@ -39,6 +39,7 @@ export interface Expense {
   category: string;
   date: string;
   description: string;
+  tags: string;
 }
 
 export interface YearlyStats {
@@ -191,6 +192,7 @@ export function calculateMonthlyStats(
         category: category,
         date: t.日期,
         description: t.描述 || t.交易对方 || "工资收入",
+        tags: t.标签 || "",
       });
     }
 
@@ -207,6 +209,7 @@ export function calculateMonthlyStats(
         category,
         date: t["日期"],
         description: t["描述"] || t["交易对方"] || "无描述",
+        tags: t["标签"] || "",
       });
 
       // Update category stats
@@ -335,6 +338,7 @@ export function calculateYearlyStats(
           category: t["分类"],
           date: t["日期"],
           description: t["描述"] || t["交易对方"] || "无描述",
+          tags: t["标签"] || "",
         });
       }
     });
