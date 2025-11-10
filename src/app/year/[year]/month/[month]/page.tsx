@@ -11,6 +11,7 @@ import {
   BarChart3,
   Filter,
   User,
+  Tag,
 } from "lucide-react";
 import ownersData from "@/config/bill_owners.json";
 import {
@@ -26,21 +27,14 @@ import {
   Tooltip,
 } from "recharts";
 import dynamic from "next/dynamic";
+import ExpenseByWeekday from "@/components/ExpenseByWeekday";
+import ExpenseBreakdown from "@/components/ExpenseBreakdown";
+import TagBreakdown from "@/components/TaggedExpenseBreakdown";
 
 // Dynamically import client-side components
 const ThresholdSlider = dynamic(() => import("@/components/ThresholdSlider"), {
   ssr: false,
 });
-
-const ExpenseBreakdown = dynamic(
-  () => import("@/components/ExpenseBreakdown"),
-  { ssr: false },
-);
-
-const TagBreakdown = dynamic(
-  () => import("@/components/TaggedExpenseBreakdown"),
-  { ssr: false },
-);
 
 interface CategoryStats {
   amount: number;
@@ -525,10 +519,12 @@ export default function MonthPage({
               暂无详细的交易数据用于阈值分析
             </div>
           )}
+        </div>
 
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <div className="flex items-center justify-between mt-6">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-              <Filter className="h-5 w-5 mr-2" />
+              <Tag className="h-5 w-5 mr-2" />
               标签分析
             </h3>
           </div>
@@ -538,6 +534,23 @@ export default function MonthPage({
           ) : (
             <div className="text-center py-8 text-gray-500">
               暂无详细的交易数据用于标签分析
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex items-center justify-between mt-6">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Calendar className="h-5 w-5 mr-2" />
+              按周分析
+            </h3>
+          </div>
+
+          {stats.expenses && stats.expenses.length > 0 ? (
+            <ExpenseByWeekday expenses={stats.expenses} />
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              暂无详细的交易数据用于按周分析
             </div>
           )}
         </div>
