@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/apiClient";
 import {
   ArrowLeft,
   Upload,
@@ -25,7 +26,7 @@ interface BillOwnersData {
 interface UploadResult {
   success: boolean;
   message: string;
-  records: number;
+  count: number;
 }
 
 export default function ImportPage() {
@@ -76,17 +77,11 @@ export default function ImportPage() {
       formData.append("platform", platform);
       formData.append("owner", owner);
 
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
+      try {
+        const data = await apiClient.uploadFile(formData);
         setResult(data);
-      } else {
-        setError(data.error || "上传失败");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "上传失败");
       }
     } catch (err) {
       setError("网络错误，请重试");
@@ -143,7 +138,7 @@ export default function ImportPage() {
                   <div>
                     <p className="text-sm text-gray-600">导入记录</p>
                     <p className="text-lg font-semibold text-gray-900">
-                      {result.records} 条
+                      {result.count} 条
                     </p>
                   </div>
                 </div>

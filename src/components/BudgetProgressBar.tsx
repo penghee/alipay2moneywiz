@@ -4,6 +4,8 @@ interface CategoryData {
   spent: number;
   budget: number;
   percentage: number;
+  remaining?: number;
+  overBudget?: boolean;
 }
 
 interface BudgetProgressProps {
@@ -138,8 +140,8 @@ export default function BudgetProgressBar({
               : "text-green-600 font-medium"
           }
         >
-          已用: ¥{budgetProgress.total.spent.toLocaleString()} (
-          {budgetProgress.total.percentage.toFixed(2)}%)
+          已用: ¥{budgetProgress?.total?.spent?.toLocaleString() ?? "0"} (
+          {(budgetProgress?.total?.percentage ?? 0).toFixed(2)}%)
         </span>
       </div>
     </>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Pencil, Trash2, Save, X, Plus } from "lucide-react";
 import billOwners from "../config/bill_owners.json";
-import { Asset } from "@/lib/types/asset";
+import { Asset } from "@/types/asset";
 
 // Type definitions
 type CategoryType = "资产" | "负债";
@@ -295,29 +295,8 @@ export function AssetsTable({
               <TableRow key={asset.id}>
                 {editingId === asset.id ? (
                   <>
-                    <TableCell>
-                      <select
-                        value={editedAsset?.type || ""}
-                        onChange={(e) =>
-                          handleFieldChange("type", e.target.value)
-                        }
-                        className="w-[100px] p-2 border rounded-md"
-                      >
-                        <option value="">选择类型</option>
-                        <option value="资产">资产</option>
-                        <option value="负债">负债</option>
-                      </select>
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="date"
-                        value={editedAsset?.date}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          handleFieldChange("date", e.target.value)
-                        }
-                        className="w-[120px]"
-                      />
-                    </TableCell>
+                    <TableCell>{editedAsset?.type || ""}</TableCell>
+                    <TableCell>{editedAsset?.date}</TableCell>
                     <TableCell>
                       <select
                         value={editedAsset?.category || ""}
@@ -357,26 +336,8 @@ export function AssetsTable({
                           ))}
                       </select>
                     </TableCell>
-                    <TableCell>
-                      <Input
-                        value={editedAsset?.name}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          handleFieldChange("name", e.target.value)
-                        }
-                        placeholder="账户"
-                        className="w-[100px]"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        value={editedAsset?.account}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          handleFieldChange("account", e.target.value)
-                        }
-                        placeholder="账户"
-                        className="w-[100px]"
-                      />
-                    </TableCell>
+                    <TableCell>{editedAsset?.name}</TableCell>
+                    <TableCell>{editedAsset?.account}</TableCell>
                     <TableCell>
                       <input
                         type="number"

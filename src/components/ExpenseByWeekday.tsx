@@ -6,7 +6,7 @@ import { useThreshold } from "../contexts/ThresholdContext";
 import {
   filterExpensesByThreshold,
   getExpenseSummary,
-} from "../utils/expenseUtils";
+} from "../lib/expenseUtils";
 
 interface ExpenseByWeekdayProps {
   expenses: Expense[];

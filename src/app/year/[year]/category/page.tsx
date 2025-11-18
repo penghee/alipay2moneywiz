@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { apiClient } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, TrendingUp, BarChart3, Table2, User } from "lucide-react";
 import ownersData from "@/config/bill_owners.json";
@@ -17,32 +18,7 @@ import {
   Bar,
 } from "recharts";
 import { formatDate } from "date-fns";
-
-interface CategoryMonthlyData {
-  month: number;
-  amount: number;
-  count: number;
-}
-
-interface CategoryStats {
-  amount: number;
-  count: number;
-}
-
-interface TopExpense {
-  date: string;
-  category: string;
-  amount: number;
-  description: string;
-}
-
-interface CategoryYearlyStats {
-  categories: string[];
-  monthlyData: Record<string, CategoryMonthlyData[]>;
-  totalByCategory: Record<string, CategoryStats>;
-  totalExpense: number;
-  topExpenses: TopExpense[];
-}
+import { CategoryYearlyStats } from "@/types/api";
 
 // 固定分类
 const FIXED_CATEGORIES = ["住房", "交通", "医疗"];
@@ -81,21 +57,13 @@ export default function CategoryPage({
 
         setYear(yearNum);
 
-        // Build query parameters
-        const queryParams = new URLSearchParams();
-        if (selectedOwner !== "all") {
-          queryParams.append("owner", selectedOwner);
-        }
-
-        const response = await fetch(
-          `/api/stats/category/${yearNum}?${queryParams.toString()}`,
+        const data = await apiClient.getCategoryStats(
+          yearNum,
+          selectedOwner !== "all" ? selectedOwner : undefined,
         );
-        if (response.ok) {
-          const data = await response.json();
-          setStats(data);
-          // 默认选择前5个分类
-          setSelectedCategories(new Set(FIXED_CATEGORIES));
-        }
+        setStats(data);
+        // 默认选择前5个分类
+        setSelectedCategories(new Set(FIXED_CATEGORIES));
       } catch (error) {
         console.error("Failed to fetch data:", error);
       } finally {

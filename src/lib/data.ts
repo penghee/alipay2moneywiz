@@ -3,6 +3,15 @@ import { readFileSync, readdirSync, existsSync } from "fs";
 import path from "path";
 import ownersData from "@/config/bill_owners.json";
 import { getDataDirectory, getYearDataDirectory } from "@/config/paths";
+import {
+  MonthlyStats,
+  Expense,
+  CategoryStats,
+  CategoryMonthlyData,
+  TopExpense,
+  CategoryYearlyStats,
+  YearlyStats,
+} from "@/types/api";
 
 export interface Transaction {
   账户: string;
@@ -16,65 +25,6 @@ export interface Transaction {
   金额: string;
   owner?: string;
   账单人?: string;
-}
-
-export interface CategoryStats {
-  amount: number;
-  count: number;
-}
-
-export interface MonthlyStats {
-  income: number;
-  expense: number;
-  balance: number;
-  expenses: Expense[];
-  salary: Expense[];
-  categoryStats: Record<string, CategoryStats>;
-  totalTransactions: number;
-}
-
-export interface Expense {
-  id: string;
-  amount: number;
-  category: string;
-  date: string;
-  description: string;
-  tags: string;
-}
-
-export interface YearlyStats {
-  totalIncome: number;
-  totalExpense: number;
-  totalBalance: number;
-  categoryStats: Record<string, CategoryStats>;
-  monthlyData: Array<{
-    month: number;
-    income: number;
-    expense: number;
-    balance: number;
-  }>;
-  expenses: Expense[];
-}
-
-export interface CategoryMonthlyData {
-  month: number;
-  amount: number;
-  count: number;
-}
-
-export interface TopExpense {
-  date: string;
-  category: string;
-  amount: number;
-  description: string;
-}
-
-interface CategoryYearlyStats {
-  categories: string[];
-  monthlyData: Record<string, CategoryMonthlyData[]>;
-  totalByCategory: Record<string, CategoryStats>;
-  totalExpense: number;
-  topExpenses: TopExpense[];
 }
 
 // 格式化金额
@@ -351,7 +301,7 @@ export function calculateYearlyStats(
     categoryStats,
     monthlyData,
     expenses,
-  };
+  } as YearlyStats;
 }
 
 // 获取可用的年份列表

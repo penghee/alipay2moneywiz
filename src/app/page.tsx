@@ -2,20 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Calendar,
-  Upload,
-  List,
-  TrendingUp,
-  DollarSign,
-  Info,
-} from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar, TrendingUp, DollarSign } from "lucide-react";
 import dynamic from "next/dynamic";
 
 import { getCategoryColor, resetColorAssignment } from "@/lib/colors";
 import BudgetProgressBar from "@/components/BudgetProgressBar";
+import { apiClient } from "@/lib/apiClient";
 
 // Dynamically import the FinancialOverview component with no SSR
 const FinancialOverview = dynamic(
@@ -52,21 +44,16 @@ export default function Home() {
     const fetchData = async () => {
       try {
         // 获取年份数据
-        const yearsResponse = await fetch("/api/years");
-        if (!yearsResponse.ok) {
-          throw new Error("Failed to fetch years");
-        }
-        const yearsData = await yearsResponse.json();
-        setYears(yearsData.years);
+        const yearsData = await apiClient.getYears();
+        setYears(yearsData);
 
         // 获取当前年份的预算数据
         const currentYear = new Date().getFullYear();
-        const budgetResponse = await fetch(
-          `/api/budget/progress?year=${currentYear}`,
-        );
-        if (budgetResponse.ok) {
-          const budgetData = await budgetResponse.json();
+        try {
+          const budgetData = await apiClient.getBudgetProgress(currentYear);
           setBudgetProgress(budgetData);
+        } catch (error) {
+          console.error("Error fetching budget progress:", error);
         }
       } catch (error) {
         console.error("Error fetching data:", error);

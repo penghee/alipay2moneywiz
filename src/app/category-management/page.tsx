@@ -3,10 +3,9 @@
 import { useState, useEffect, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Plus, Trash2, X, Tag } from "lucide-react";
+import { apiClient } from "@/lib/apiClient";
 
-type CategoryMap = {
-  [key: string]: string[]; // category: tags[]
-};
+type CategoryMap = Record<string, string[]>; // category: tags[]
 
 export default function CategoryManagement() {
   const [categoryMap, setCategoryMap] = useState<CategoryMap>({});
@@ -18,16 +17,18 @@ export default function CategoryManagement() {
 
   // Load categories and tags
   useEffect(() => {
-    fetch("/api/category-map")
-      .then((res) => res.json())
-      .then((data) => {
+    const loadCategoryMap = async () => {
+      try {
+        const data = await apiClient.getCategoryMap();
         setCategoryMap(data);
-        setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("Failed to fetch category map:", err);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    loadCategoryMap();
   }, []);
 
   // Add a new category
@@ -91,19 +92,9 @@ export default function CategoryManagement() {
   // Update category map in both state and API
   const updateCategoryMap = async (updates: CategoryUpdate) => {
     try {
-      const response = await fetch("/api/category-map", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updates),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        // Update local state with the new data from server
-        setCategoryMap(result.data);
-      }
+      // The updateCategoryMap method now returns the updated category map
+      const updatedMap = await apiClient.updateCategoryMap(updates);
+      setCategoryMap(updatedMap);
     } catch (err) {
       console.error("Failed to update category map:", err);
     }

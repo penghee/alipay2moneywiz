@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Expense } from "../types/expense";
-import { getExpenseSummary } from "../utils/expenseUtils";
+import { getExpenseSummary } from "../lib/expenseUtils";
 
 interface TaggedExpenseBreakdownProps {
   expenses: Expense[];

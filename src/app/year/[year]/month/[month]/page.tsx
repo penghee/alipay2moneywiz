@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/apiClient";
 import {
   ArrowLeft,
   Calendar,
@@ -30,7 +31,7 @@ import dynamic from "next/dynamic";
 import ExpenseByWeekday from "@/components/ExpenseByWeekday";
 import ExpenseBreakdown from "@/components/ExpenseBreakdown";
 import TagBreakdown from "@/components/TaggedExpenseBreakdown";
-
+import { MonthlyStats } from "@/types/api";
 // Dynamically import client-side components
 const ThresholdSlider = dynamic(() => import("@/components/ThresholdSlider"), {
   ssr: false,
@@ -39,31 +40,6 @@ const ThresholdSlider = dynamic(() => import("@/components/ThresholdSlider"), {
 interface CategoryStats {
   amount: number;
   count: number;
-}
-
-interface Expense {
-  id: string;
-  amount: number;
-  category: string;
-  date: string;
-  description: string;
-}
-
-interface MonthlyStats {
-  income: number;
-  expense: number;
-  balance: number;
-  categoryStats: Record<string, CategoryStats>;
-  totalTransactions: number;
-  expenses?: Expense[];
-  prevMonthStats?: {
-    amount: number;
-    count: number;
-  };
-  prevYearStats?: {
-    amount: number;
-    count: number;
-  };
 }
 
 export default function MonthPage({
@@ -91,12 +67,6 @@ export default function MonthPage({
     [],
   );
 
-  // Type for the monthly API response
-  interface MonthlyApiResponse {
-    categoryStats: Record<string, CategoryStats>;
-    // Add other fields from the API response if needed
-  }
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -114,48 +84,50 @@ export default function MonthPage({
         setYear(yearNum);
         setMonth(monthNum);
 
-        // Build query parameters
-        const queryParams = new URLSearchParams();
-        if (selectedOwner !== "all") {
-          queryParams.append("owner", selectedOwner);
-        }
-        const queryString = queryParams.toString();
-        const urlSuffix = queryString ? `?${queryString}` : "";
+        const owner = selectedOwner !== "all" ? selectedOwner : undefined;
 
-        const [currentMonthRes, prevMonthRes, prevYearRes] = await Promise.all([
-          fetch(`/api/stats/monthly/${yearNum}/${monthNum}${urlSuffix}`),
-          // Get previous month's data
-          fetch(
-            `/api/stats/monthly/${
-              monthNum === 1 ? yearNum - 1 : yearNum
-            }/${monthNum === 1 ? 12 : monthNum - 1}${urlSuffix}`,
-          ).then((res) =>
-            res.ok ? res.json() : {},
-          ) as Promise<MonthlyApiResponse>,
-          // Get same month last year's data
-          fetch(
-            `/api/stats/monthly/${yearNum - 1}/${monthNum}${urlSuffix}`,
-          ).then((res) =>
-            res.ok ? res.json() : {},
-          ) as Promise<MonthlyApiResponse>,
-        ]);
+        try {
+          // Current month data
+          const currentMonthData = (await apiClient.getMonthlyStats(
+            yearNum,
+            monthNum,
+            owner,
+          )) as MonthlyStats;
+          setStats(currentMonthData);
 
-        if (currentMonthRes.ok) {
-          const data = await currentMonthRes.json();
-          setStats(data);
+          // Previous month data
+          const prevMonthData = await apiClient
+            .getMonthlyStats(
+              monthNum === 1 ? yearNum - 1 : yearNum,
+              monthNum === 1 ? 12 : monthNum - 1,
+              owner,
+            )
+            .catch(() => ({}) as MonthlyStats);
+
+          // Same month last year data
+          const prevYearData = await apiClient
+            .getMonthlyStats(yearNum - 1, monthNum, owner)
+            .catch(() => ({}) as MonthlyStats);
+
+          const toCategoryRecord = (
+            stats: MonthlyStats | null,
+          ): Record<string, CategoryStats> => {
+            if (!stats) return {};
+
+            // If we have categoryStats (old format), use it directly
+            if (stats.categoryStats) {
+              return stats.categoryStats;
+            }
+            return {};
+          };
 
           // Process comparison data
-          if (prevMonthRes && prevMonthRes.categoryStats) {
-            setPrevMonthData(prevMonthRes.categoryStats);
-          } else {
-            setPrevMonthData({});
-          }
-
-          if (prevYearRes && prevYearRes.categoryStats) {
-            setPrevYearData(prevYearRes.categoryStats);
-          } else {
-            setPrevYearData({});
-          }
+          setPrevMonthData(toCategoryRecord(prevMonthData));
+          setPrevYearData(toCategoryRecord(prevYearData));
+        } catch (error) {
+          console.error("Failed to fetch data:", error);
+          setPrevMonthData({});
+          setPrevYearData({});
         }
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -203,7 +175,9 @@ export default function MonthPage({
   }
 
   // 准备饼图数据
-  const pieData = Object.entries(stats.categoryStats)
+  const categoryStats = stats.categoryStats;
+
+  const pieData = Object.entries(categoryStats)
     .map(([category, data]) => ({
       name: category,
       value: data.amount,

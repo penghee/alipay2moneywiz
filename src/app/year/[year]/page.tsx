@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/apiClient";
 import {
   ArrowLeft,
   Calendar,
@@ -39,37 +40,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-
-interface CategoryStats {
-  amount: number;
-  count: number;
-}
-
-interface Expense {
-  id: string;
-  amount: number;
-  category: string;
-  date: string;
-  description: string;
-}
-
-interface YearlyStats {
-  totalIncome: number;
-  totalExpense: number;
-  totalBalance: number;
-  categoryStats: Record<string, CategoryStats>;
-  monthlyData: Array<{
-    month: number;
-    income: number;
-    expense: number;
-    balance: number;
-  }>;
-  expenses?: Expense[]; // Add expenses to the stats if available
-}
-
-interface MonthData {
-  months: number[];
-}
+import { YearlyStats, CategoryYearlyStats } from "@/types/api";
 
 export default function YearPage({
   params,
@@ -107,47 +78,37 @@ export default function YearPage({
         }
 
         setYear(yearNum);
+        const [statsData, months, budgetRes, prevYearRes] = await Promise.all([
+          apiClient.getYearlyStats(yearNum, selectedOwner),
+          apiClient.getMonthsInYear(yearNum, selectedOwner),
+          apiClient.getBudgetProgress(yearNum, selectedOwner).catch(() => ({
+            total: {
+              budget: 0,
+              spent: 0,
+              remaining: 0,
+              percentage: 0,
+              overBudget: false,
+            },
+            categories: {},
+          })),
+          // Fetch previous year's data for comparison
+          apiClient
+            .getYearlyStats(yearNum - 1, selectedOwner)
+            .catch(() => null),
+        ]);
 
-        // Build query parameters
-        const queryParams = new URLSearchParams();
-        if (selectedOwner !== "all") {
-          queryParams.append("owner", selectedOwner);
-        }
-
-        const [statsRes, monthsRes, budgetRes, prevYearRes] = await Promise.all(
-          [
-            fetch(`/api/stats/yearly/${yearNum}?${queryParams.toString()}`),
-            fetch(`/api/years/${yearNum}/months?${queryParams.toString()}`),
-            fetch(
-              `/api/budget/progress?year=${yearNum}&${queryParams.toString()}`,
-            ).then((res) =>
-              res.ok ? res.json() : { total: { budget: 0, spent: 0 } },
-            ),
-            // Fetch previous year's data for comparison
-            fetch(`/api/stats/yearly/${yearNum - 1}?${queryParams.toString()}`)
-              .then((res) => (res.ok ? res.json() : null))
-              .catch(() => null),
-          ],
-        );
+        // Update state with fetched data
+        setStats(statsData);
+        setMonths(months);
 
         if (prevYearRes) {
           setPrevYearStats(prevYearRes);
         }
 
-        // 设置预算数据
-        if (budgetRes && budgetRes.total) {
+        // Set budget data if available
+        if (budgetRes?.total) {
           setTotalBudget(budgetRes.total.budget);
           setBudgetUsed(budgetRes.total.spent);
-        }
-
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          setStats(statsData);
-        }
-
-        if (monthsRes.ok) {
-          const monthsData = await monthsRes.json();
-          setMonths(monthsData.months);
         }
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -159,7 +120,8 @@ export default function YearPage({
     fetchData();
   }, [params, selectedOwner]);
 
-  const formatMoney = (amount: number) => {
+  const formatMoney = (amount?: number) => {
+    if (!amount) return "0.00";
     return new Intl.NumberFormat("zh-CN", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -167,43 +129,50 @@ export default function YearPage({
   };
   // Calculate averages
   const averageMonthlyExpense = useMemo(() => {
-    if (!stats) return 0;
+    if (!stats || !stats.totalExpense || !stats.monthlyData) return 0;
     return stats.totalExpense / stats.monthlyData.length;
   }, [stats]);
 
-  const averageMonthlyIncome = stats
-    ? Math.round((stats.totalIncome / stats.monthlyData.length) * 100) / 100
-    : 0;
+  const averageMonthlyIncome = useMemo(() => {
+    if (!stats || !stats.totalIncome || !stats.monthlyData) return 0;
+    return stats.totalIncome / stats.monthlyData.length;
+  }, [stats]);
 
   // Calculate average monthly expense per category
-  const averageCategoryExpenses = stats
-    ? Object.entries(stats.categoryStats)
-        .map(([category, data]) => ({
-          category,
-          average:
-            Math.round((data.amount / stats.monthlyData.length) * 100) / 100,
-          total: data.amount,
-          count: data.count,
-          percentage: Math.round((data.amount / stats.totalExpense) * 100) || 0,
-        }))
-        .sort((a, b) => b.average - a.average)
-    : [];
+  const averageCategoryExpenses = useMemo(() => {
+    if (
+      !stats ||
+      !stats.categoryStats ||
+      !stats.monthlyData ||
+      !stats.totalExpense
+    )
+      return [];
+    return Object.entries(stats.categoryStats)
+      .map(([category, data]) => ({
+        category,
+        average:
+          Math.round((data.amount / (stats.monthlyData?.length || 0)) * 100) /
+          100,
+        total: data.amount,
+        count: data.count,
+        percentage:
+          Math.round((data.amount / (stats.totalExpense || 0)) * 100) || 0,
+      }))
+      .sort((a, b) => b.average - a.average);
+  }, [stats]);
 
   // Calculate liquidity ratio
   useEffect(() => {
     const fetchLiquidityRatio = async () => {
       try {
-        const response = await fetch("/api/summary");
-        if (response.ok) {
-          const data = await response.json();
-          // Use the pre-calculated cashAssets from the API
-          const cashAssets = data.cashAssets || 0;
-          setCashAssets(cashAssets);
-          // Calculate ratio (months of coverage)
-          const currentAvgExpense = averageMonthlyExpense;
-          if (currentAvgExpense > 0) {
-            setLiquidityRatio(cashAssets / currentAvgExpense);
-          }
+        const data = await apiClient.getSummary();
+        // Use the pre-calculated cashAssets from the API
+        const cashAssets = data.cashAssets || 0;
+        setCashAssets(cashAssets);
+        // Calculate ratio (months of coverage)
+        const currentAvgExpense = averageMonthlyExpense;
+        if (currentAvgExpense > 0) {
+          setLiquidityRatio(cashAssets / currentAvgExpense);
         }
       } catch (error) {
         console.error("Error fetching liquidity data:", error);
@@ -243,24 +212,28 @@ export default function YearPage({
     );
   }
 
-  const chartData = stats.monthlyData.map((data) => ({
-    month: `${data.month}月`,
-    income: data.income,
-    expense: data.expense,
-    balance: data.balance,
-  }));
+  const chartData =
+    stats?.monthlyData?.map((data) => ({
+      month: `${data.month}月`,
+      income: data.income,
+      expense: data.expense,
+      balance: data.balance,
+    })) || [];
 
   // 准备分类饼图数据
   const pieData = stats
-    ? Object.entries(stats.categoryStats)
+    ? Object.entries(stats?.categoryStats || {})
         .map(([category, data]) => ({
           name: category,
           value: data.amount,
           count: data.count,
           average:
-            Math.round((data.amount / stats.monthlyData.length) * 100) / 100,
+            Math.round(
+              (data.amount / (stats?.monthlyData?.length || 0)) * 100,
+            ) / 100,
           total: data.amount,
-          percentage: Math.round((data.amount / stats.totalExpense) * 100) || 0,
+          percentage:
+            Math.round((data.amount / (stats?.totalExpense || 0)) * 100) || 0,
         }))
         .sort((a, b) => b.value - a.value)
     : [];
