@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { loadAssets } from "@/lib/utils/assetUtils";
-import { Asset } from "@/lib/types/asset";
+import { loadAssets } from "@/lib/assetUtils";
+import { Asset } from "@/types/asset";
 
 interface SankeyNode {
   name: string;

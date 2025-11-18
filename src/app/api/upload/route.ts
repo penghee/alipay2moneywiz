@@ -505,7 +505,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `成功导入 ${transactions.length} 条记录`,
-      records: transactions.length,
+      count: transactions.length,
     });
   } catch (error) {
     console.error("Upload error:", error);

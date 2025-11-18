@@ -1,0 +1,169 @@
+import { Asset, AssetSummary, Liability } from "./asset";
+
+export interface Budget {
+  year: number;
+  total: number;
+  categories: Record<string, number>;
+  spent: number;
+  remaining: number;
+}
+
+export interface BudgetProgress {
+  total: {
+    budget: number;
+    spent: number;
+    remaining: number;
+    percentage: number;
+    overBudget: boolean;
+  };
+  categories: Record<
+    string,
+    {
+      budget: number;
+      spent: number;
+      remaining: number;
+      percentage: number;
+      overBudget: boolean;
+    }
+  >;
+}
+
+export interface MonthlyFinancials {
+  month: string; // YYYY-MM
+  expenses: number;
+  salary: number;
+  income: number;
+  balance: number;
+  categories?: Record<string, number>; // Optional since not all components need it
+}
+
+export interface YearlyStats {
+  year: number;
+  income: number;
+  expense: number;
+  balance: number;
+  // For backward compatibility
+  totalIncome: number;
+  totalExpense: number;
+  totalBalance: number;
+  categoryStats?: Record<string, { amount: number; count: number }>;
+  monthlyData: Array<{
+    month: number;
+    income: number;
+    expense: number;
+    balance: number;
+    totalIncome?: number;
+    totalExpense?: number;
+  }>;
+  expenses?: Expense[];
+}
+
+export interface MonthlyCategoryStats {
+  amount: number;
+  count: number;
+}
+
+export interface MonthlyStats {
+  income: number;
+  expense: number;
+  balance: number;
+  expenses: Expense[];
+  salary: Expense[];
+  categoryStats: Record<string, MonthlyCategoryStats>;
+  totalTransactions: number;
+}
+
+export interface CategoryStats {
+  amount: number;
+  count: number;
+}
+
+export interface MonthlyStats {
+  income: number;
+  expense: number;
+  balance: number;
+  expenses: Expense[];
+  salary: Expense[];
+  categoryStats: Record<string, CategoryStats>;
+  totalTransactions: number;
+}
+
+export interface Expense {
+  id: string;
+  amount: number;
+  category: string;
+  date: string;
+  description: string;
+  tags: string;
+}
+
+export interface CategoryMonthlyData {
+  month: number;
+  amount: number;
+  count: number;
+}
+
+export interface TopExpense {
+  date: string;
+  category: string;
+  amount: number;
+  description: string;
+}
+
+export interface CategoryYearlyStats {
+  categories: string[];
+  monthlyData: Record<string, CategoryMonthlyData[]>;
+  totalByCategory: Record<string, CategoryStats>;
+  totalExpense: number;
+  topExpenses: TopExpense[];
+}
+
+export interface Summary {
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+  monthlyIncome: number;
+  monthlyExpense: number;
+  monthlySavings: number;
+  savingsRate: number;
+  cashAssets: number; // Liquid cash available
+  creditCardDebt?: number;
+  investmentAssets?: number;
+  sankeyData?: {
+    nodes: Array<{ name: string }>;
+    links: Array<{ source: number; target: number; value: number }>;
+  };
+  budgetStatus: {
+    totalBudget: number;
+    totalSpent: number;
+    remaining: number;
+    percentageUsed: number;
+  };
+}
+
+export interface Transaction extends Expense {
+  id: string;
+  type: "income" | "expense";
+  account: string;
+  owner: string;
+  date: string; // ISO date string
+}
+
+export interface UploadResponse {
+  success: boolean;
+  message: string;
+  count: number;
+  errors?: Array<{
+    row: number;
+    message: string;
+  }>;
+}
+
+export interface YearsResponse {
+  years: number[];
+}
+
+export interface MonthsResponse {
+  year: number;
+  months: number[];
+}

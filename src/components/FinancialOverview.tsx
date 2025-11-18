@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiClient } from "@/lib/apiClient";
 import {
   LineChart,
   Line,
@@ -89,12 +90,8 @@ export default function FinancialOverview() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("/api/financials/monthly");
-        if (!response.ok) {
-          throw new Error("Failed to fetch financial data");
-        }
-        const result = await response.json();
-        setData(result.data);
+        const monthlyData = await apiClient.getMonthlyFinancials();
+        setData(monthlyData);
       } catch (err) {
         setError(err instanceof Error ? err : new Error("An error occurred"));
         console.error("Error fetching financial data:", err);
@@ -106,17 +103,24 @@ export default function FinancialOverview() {
     fetchData();
   }, []);
 
-  // Calculate totals
-  const totalExpenses = data.reduce((sum, item) => sum + item.expenses, 0);
-  const totalSalary = data.reduce(
-    (sum, item) => (item.salary > 0 ? sum + item.salary : sum),
+  // Calculate totals with null checks
+  const safeData = Array.isArray(data) ? data : [];
+  const totalExpenses = safeData.reduce(
+    (sum, item) => sum + (item?.expenses || 0),
     0,
   );
-  const totalIncome = data.reduce(
-    (sum, item) => (item.income > 0 ? sum + item.income : sum),
+  const totalSalary = safeData.reduce(
+    (sum, item) => (item?.salary > 0 ? sum + item.salary : sum),
     0,
   );
-  const totalBalance = data.reduce((sum, item) => sum + item.balance, 0);
+  const totalIncome = safeData.reduce(
+    (sum, item) => (item?.income > 0 ? sum + item.income : sum),
+    0,
+  );
+  const totalBalance = safeData.reduce(
+    (sum, item) => sum + (item?.balance || 0),
+    0,
+  );
 
   if (loading) {
     return (
@@ -171,7 +175,7 @@ export default function FinancialOverview() {
       {/* Chart */}
       <div className="h-96 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <LineChart data={safeData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" />
             <YAxis />

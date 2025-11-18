@@ -4,20 +4,15 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FinancialNumber } from "@/components/FinancialNumber";
-import { Asset } from "@/lib/types/asset";
+import { Asset } from "@/types/asset";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import {
-  ArrowUp,
-  ArrowDown,
-  Wallet,
-  PiggyBank,
-  Scale,
-  Plus,
-  Save,
-  X,
-  Trash2,
-} from "lucide-react";
+import { Wallet, PiggyBank, Scale } from "lucide-react";
 import { AssetsTable } from "@/components/AssetsTable";
+import { apiClient } from "@/lib/apiClient";
+import type {
+  Summary as ApiSummary,
+  YearlyStats as ApiYearlyStats,
+} from "@/types/api";
 
 // Define types for our data
 interface SankeyNode {
@@ -30,26 +25,18 @@ interface SankeyLink {
   value: number;
 }
 
-interface YearlyStats {
-  totalExpense: number;
-  monthlyData: Array<{
-    month: number;
-    expense: number;
-  }>;
+interface SankeyChartData {
+  nodes: SankeyNode[];
+  links: SankeyLink[];
 }
 
-interface SummaryData {
-  totalAssets: number;
-  totalLiabilities: number;
-  creditCardDebt: number;
-  netWorth: number;
-  investmentAssets: number;
+// Extend the Summary interface from API types to include our additional fields
+interface SummaryData extends Omit<ApiSummary, "sankeyData"> {
   annualExpenses?: number;
-  yearStats?: YearlyStats;
-  sankeyData: {
-    nodes: SankeyNode[];
-    links: SankeyLink[];
-  };
+  yearStats?: ApiYearlyStats;
+  sankeyData?: SankeyChartData;
+  creditCardDebt?: number;
+  investmentAssets?: number;
 }
 
 // Helper function to format currency
@@ -85,17 +72,13 @@ export default function SummaryPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // const [debtServiceRatio, setDebtServiceRatio] = useState<number | null>(null);
   const [latestIncome, setLatestIncome] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showNumbers, setShowNumbers] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
 
   const fetchAssets = useCallback(async () => {
     try {
-      const response = await fetch("/api/assets");
-      if (!response.ok) throw new Error("Failed to fetch assets");
-      const assetsData = await response.json();
+      const assetsData = await apiClient.getAssets();
       setAssets(assetsData);
     } catch (err) {
       console.error("Error fetching assets:", err);
@@ -104,17 +87,35 @@ export default function SummaryPage() {
   }, []);
 
   // Calculate annual expenses from yearly stats
-  const calculateAnnualExpenses = (yearStats?: YearlyStats): number => {
-    if (
-      !yearStats ||
-      !yearStats.monthlyData ||
-      yearStats.monthlyData.length === 0
-    ) {
+  const calculateAnnualExpenses = (
+    yearStats?: ApiYearlyStats | null,
+  ): number => {
+    if (!yearStats) {
       return 240000; // Default fallback value (20,000 per month * 12)
     }
-    const averageMonthlyExpense =
-      yearStats.totalExpense / yearStats.monthlyData.length;
-    return averageMonthlyExpense * 12;
+
+    const stats = yearStats;
+
+    // Calculate from monthly data if available
+    if (stats.monthlyData && stats.monthlyData.length > 0) {
+      return stats.monthlyData.reduce(
+        (
+          sum: number,
+          month: {
+            month: number;
+            income: number;
+            expense: number;
+            balance: number;
+            totalIncome?: number;
+            totalExpense?: number;
+          },
+        ) => sum + month.expense,
+        0,
+      );
+    }
+
+    // Final fallback
+    return 240000;
   };
 
   useEffect(() => {
@@ -123,42 +124,42 @@ export default function SummaryPage() {
         setIsLoading(true);
         const currentYear = new Date().getFullYear();
 
-        // Fetch all data in parallel
-        const [summaryRes, incomeRes, yearRes] = await Promise.all([
-          fetch("/api/summary"),
-          fetch("/api/income/latest"),
-          fetch(`/api/stats/yearly/${currentYear}`),
-        ]);
-
-        if (!summaryRes.ok) throw new Error("Failed to fetch summary data");
-        if (!incomeRes.ok) throw new Error("Failed to fetch income data");
-
+        // Fetch all data in parallel using apiClient
         const [summaryData, incomeData, yearData] = await Promise.all([
-          summaryRes.json(),
-          incomeRes.json(),
-          yearRes.ok ? yearRes.json() : Promise.resolve(null),
+          apiClient.getSummary(),
+          apiClient.getLatestIncome(),
+          (async () => {
+            try {
+              return await apiClient.getYearlyStats(currentYear);
+            } catch (error) {
+              console.error("Error fetching yearly stats:", error);
+              return null;
+            }
+          })(),
         ]);
 
         // Calculate annual expenses from year data
-        const annualExpenses = calculateAnnualExpenses(yearData);
+        const annualExpenses = yearData
+          ? calculateAnnualExpenses(yearData)
+          : 240000; // Default to 240,000 if no year data
+
+        // Ensure the data is in the correct format
+        const yearStats = yearData ? yearData : undefined;
 
         // Update summary data with calculated annual expenses
-        const updatedSummaryData = {
+        const updatedSummaryData: SummaryData = {
           ...summaryData,
           annualExpenses,
-          yearStats: yearData,
+          yearStats,
+          // Safely include optional properties with defaults
+          sankeyData: summaryData.sankeyData || { nodes: [], links: [] },
         };
-
+        console.log(updatedSummaryData);
         setData(updatedSummaryData);
 
-        // Calculate debt service ratio if we have credit card debt and income
-        // const totalLiabilities = summaryData.totalLiabilities || 0;
-        const monthlyIncome = incomeData.data.amount || 0;
-
+        // Get monthly income from the API response
+        const monthlyIncome = incomeData.amount || 0;
         setLatestIncome(monthlyIncome);
-        // if (monthlyIncome > 0) {
-        //   setDebtServiceRatio(totalLiabilities / monthlyIncome);
-        // }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -168,51 +169,42 @@ export default function SummaryPage() {
 
     fetchData();
     fetchAssets();
-  }, []);
+  }, [fetchAssets]); // Added fetchAssets to dependency array
 
   // 短期信用卡负债
   const debtServiceRatio = useMemo(() => {
-    if (!data || !data.creditCardDebt || !latestIncome) {
-      return null;
-    }
+    if (!data?.creditCardDebt || !latestIncome) return null;
     return data.creditCardDebt / latestIncome;
-  }, [data, latestIncome]);
+  }, [data?.creditCardDebt, latestIncome]);
 
   // 长期负债
   const longTermDebt = useMemo(() => {
-    if (!data || !data.totalLiabilities || !data.totalAssets) {
-      return null;
-    }
+    if (!data?.totalLiabilities || !data?.totalAssets) return null;
     return data.totalLiabilities / data.totalAssets;
-  }, [data]);
+  }, [data?.totalLiabilities, data?.totalAssets]);
 
   const handleSaveAssets = async (updatedAssets: Asset[]) => {
     try {
       setIsSaving(true);
-      const response = await fetch("/api/assets", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedAssets),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save assets");
-      }
+      await apiClient.createAssets(updatedAssets);
+      setAssets(updatedAssets);
 
       // Refresh summary data
-      const [summaryRes] = await Promise.all([fetch("/api/summary")]);
-
-      if (!summaryRes.ok) throw new Error("Failed to refresh summary data");
-      const summaryData = await summaryRes.json();
-      setData((prevData) => ({
-        ...prevData,
-        ...summaryData,
-      }));
-    } catch (err) {
-      console.error("Error saving assets:", err);
+      const summaryData = await apiClient.getSummary();
+      setData((prevData) => {
+        if (!prevData) return null;
+        return {
+          ...prevData,
+          ...summaryData,
+          annualExpenses: prevData.annualExpenses,
+          yearStats: prevData.yearStats,
+          sankeyData: prevData.sankeyData, // Ensure sankeyData is preserved
+        } as SummaryData; // Explicitly cast to SummaryData to ensure type safety
+      });
+    } catch (error) {
+      console.error("Error saving assets:", error);
       setError("Failed to save assets");
+      throw error; // Re-throw the error to be handled by the caller if needed
     } finally {
       setIsSaving(false);
     }
@@ -220,7 +212,7 @@ export default function SummaryPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">资产概览</h1>
           <Skeleton className="h-9 w-24" />
@@ -496,37 +488,38 @@ export default function SummaryPage() {
                   formatValue={formatCurrency}
                 />
               </div>
-              {debtServiceRatio !== null &&
-                latestIncome &&
-                latestIncome > 0 && (
-                  <div className="mt-2">
-                    <p className="text-xs text-gray-500">
-                      最新收入:{" "}
-                      <FinancialNumber
-                        value={latestIncome}
-                        showNumbers={showNumbers}
-                        formatValue={formatCurrency}
-                      />
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      (信用卡负债:{" "}
-                      <FinancialNumber
-                        value={data.creditCardDebt}
-                        showNumbers={showNumbers}
-                        formatValue={formatCurrency}
-                      />
-                      )
-                    </p>
+              <div className="mt-2">
+                <p className="text-xs text-gray-500">
+                  最新收入:{" "}
+                  <FinancialNumber
+                    value={latestIncome}
+                    showNumbers={showNumbers}
+                    formatValue={formatCurrency}
+                  />
+                </p>
+                <p className="text-xs text-gray-500">
+                  (信用卡负债:{" "}
+                  <FinancialNumber
+                    value={data.creditCardDebt ?? 0}
+                    showNumbers={showNumbers}
+                    formatValue={formatCurrency}
+                  />
+                  )
+                </p>
+              </div>
+              <div>
+                {debtServiceRatio !== null && (
+                  <>
                     <p className="text-sm font-medium mt-2">
-                      短期负债率:{" "}
+                      负债偿还比率:{" "}
                       <span
-                        className={
+                        className={`ml-1 ${
                           debtServiceRatio < 0.3
                             ? "text-green-600"
                             : debtServiceRatio <= 0.4
-                              ? "text-yellow-600"
+                              ? "text-yellow-500"
                               : "text-red-600"
-                        }
+                        }`}
                       >
                         {formatPercentage(debtServiceRatio)}
                       </span>
@@ -538,22 +531,23 @@ export default function SummaryPage() {
                           ? "警戒区，申请新贷款较困难"
                           : "危险区，影响生活质量"}
                     </p>
+                  </>
+                )}
+                {longTermDebt !== null && (
+                  <div className="mt-2">
+                    <p className="text-sm font-medium">
+                      长期负债率: {formatPercentage(longTermDebt)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {longTermDebt < 0.4
+                        ? "轻松区"
+                        : longTermDebt <= 0.5
+                          ? "警戒区，申请新贷款较困难"
+                          : "危险区，影响生活质量"}
+                    </p>
                   </div>
                 )}
-              {longTermDebt !== null && (
-                <div className="mt-2">
-                  <p className="text-sm font-medium">
-                    长期负债率: {formatPercentage(longTermDebt)}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {longTermDebt < 0.4
-                      ? "轻松区"
-                      : longTermDebt <= 0.5
-                        ? "警戒区，申请新贷款较困难"
-                        : "危险区，影响生活质量"}
-                  </p>
-                </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -594,7 +588,7 @@ export default function SummaryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">
-                {data.totalAssets > 0
+                {data.investmentAssets && data.totalAssets > 0
                   ? formatPercentage(data.investmentAssets / data.totalAssets)
                   : "N/A"}
               </div>
@@ -603,18 +597,20 @@ export default function SummaryPage() {
                   <div
                     className="bg-purple-600 h-2 rounded-full"
                     style={{
-                      width: `${data.totalAssets > 0 ? Math.min(100, (data.investmentAssets / data.totalAssets) * 100) : 0}%`,
+                      width: `${data.investmentAssets && data.totalAssets > 0 ? Math.min(100, (data.investmentAssets / data.totalAssets) * 100) : 0}%`,
                     }}
                   ></div>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  {data.investmentAssets / data.totalAssets >= 0.5
-                    ? "健康"
-                    : "待优化"}
-                  {data.totalAssets > 0 && (
-                    <span className="ml-2">(目标 ≥50%)</span>
-                  )}
-                </p>
+                {data.investmentAssets && data.totalAssets > 0 && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {data.investmentAssets / data.totalAssets >= 0.5
+                      ? "健康"
+                      : "待优化"}
+                    {data.totalAssets > 0 && (
+                      <span className="ml-2">(目标 ≥50%)</span>
+                    )}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -722,7 +718,9 @@ export default function SummaryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">
-                {data.annualExpenses && data.annualExpenses > 0
+                {data.annualExpenses &&
+                data.investmentAssets &&
+                data.annualExpenses > 0
                   ? formatPercentage(
                       (data.investmentAssets * 0.08) / data.annualExpenses,
                     )
@@ -733,12 +731,14 @@ export default function SummaryPage() {
                   <div
                     className="bg-emerald-500 h-2 rounded-full"
                     style={{
-                      width: `${data.annualExpenses && data.annualExpenses > 0 ? Math.min(100, ((data.investmentAssets * 0.08) / data.annualExpenses) * 100) : 0}%`,
+                      width: `${data.annualExpenses && data.investmentAssets && data.annualExpenses > 0 ? Math.min(100, ((data.investmentAssets * 0.08) / data.annualExpenses) * 100) : 0}%`,
                     }}
                   ></div>
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
-                  {data.annualExpenses && data.annualExpenses > 0 ? (
+                  {data.annualExpenses &&
+                  data.investmentAssets &&
+                  data.annualExpenses > 0 ? (
                     <>
                       {(data.investmentAssets * 0.08) / data.annualExpenses >= 1
                         ? "财务自由"
@@ -862,24 +862,30 @@ export default function SummaryPage() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="h-[500px] w-full">
-              {data.sankeyData?.nodes?.length > 0 &&
-              data.sankeyData?.links?.length > 0 ? (
-                <SankeyChart data={data.sankeyData} />
+              {data?.sankeyData ? (
+                <SankeyChart
+                  data={{
+                    nodes: data.sankeyData.nodes,
+                    links: data.sankeyData.links,
+                  }}
+                />
               ) : (
-                <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                  <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
+                <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+                  <div className="p-3 bg-gray-100 rounded-full">
+                    <svg
+                      className="w-8 h-8 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                  </div>
                   <h3 className="mt-2 text-sm font-medium text-gray-900">
                     没有可用的图表数据
                   </h3>

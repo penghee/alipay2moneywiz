@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, ChevronRight, Calendar } from "lucide-react";
+import { apiClient } from "@/lib/apiClient";
 
 interface YearData {
   year: number;
@@ -20,13 +21,7 @@ export default function DateTreeNav() {
     const fetchData = async () => {
       try {
         // Fetch all years
-        const yearsRes = await fetch("/api/years");
-        const yearsData = await yearsRes.json();
-
-        // Check if yearsData is an array, if not, use the years property if it exists
-        const yearsArray = Array.isArray(yearsData)
-          ? yearsData
-          : yearsData.years || [];
+        const yearsArray = await apiClient.getYears();
 
         if (!yearsArray || yearsArray.length === 0) {
           setYears([]);
@@ -35,14 +30,9 @@ export default function DateTreeNav() {
 
         // For each year, fetch its months
         const yearsWithMonths = await Promise.all(
-          yearsArray.map(async (year: string) => {
+          yearsArray.map(async (year: number) => {
             try {
-              const monthsRes = await fetch(`/api/years/${year}/months`);
-              const monthsData = await monthsRes.json();
-              // Handle both array response and object with months property
-              const months = Array.isArray(monthsData)
-                ? monthsData
-                : monthsData.months || [];
+              const months = await apiClient.getMonthsInYear(year);
               return { year, months };
             } catch (error) {
               console.error(`Error fetching months for year ${year}:`, error);

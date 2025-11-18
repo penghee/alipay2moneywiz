@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
 import BudgetProgressBar from "@/components/BudgetProgressBar";
-import { ArrowLeft, Save, Plus, Trash2, Info } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -12,11 +11,11 @@ import {
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Legend,
-  PieLabelRenderProps,
 } from "recharts";
 import { BudgetAlerts } from "@/components/BudgetAlerts";
 import appConfig from "@/config/app_config.json";
 import { getCategoryColor, resetColorAssignment } from "@/lib/colors";
+import { apiClient } from "@/lib/apiClient";
 
 interface BudgetData {
   total: number;
@@ -26,11 +25,7 @@ interface BudgetData {
 export async function fetchYearlyBudget(
   year: number | string,
 ): Promise<BudgetData> {
-  const response = await fetch(`/api/budget?year=${year}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch budget");
-  }
-  return response.json();
+  return apiClient.getBudget(Number(year));
 }
 
 export async function updateYearlyBudget(
@@ -38,17 +33,7 @@ export async function updateYearlyBudget(
   total: number | null = null,
   categories: Record<string, number> | null = null,
 ): Promise<void> {
-  const response = await fetch("/api/budget", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ year, total, categories }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to update budget");
-  }
+  await apiClient.createBudget(Number(year), total || 0, categories || {});
 }
 
 export async function fetchBudgetProgress(
@@ -73,13 +58,7 @@ export async function fetchBudgetProgress(
     }
   >;
 }> {
-  const response = await fetch(
-    `/api/budget/progress?year=${year}${month ? `&month=${month}` : ""}`,
-  );
-  if (!response.ok) {
-    throw new Error("Failed to fetch budget progress");
-  }
-  return response.json();
+  return apiClient.getBudgetProgress(Number(year), month?.toString());
 }
 
 interface BudgetProgressCategory {
@@ -116,35 +95,61 @@ export default function BudgetPage({
   const [isSaving, setIsSaving] = useState(false);
   const [budgetProgress, setBudgetProgress] =
     useState<BudgetProgressData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
+    console.log("Initializing budget page...");
     resetColorAssignment();
     const loadBudget = async () => {
       try {
+        console.log("Loading budget data...");
         const resolvedParams = await params;
+        console.log("Params:", resolvedParams);
         const yearNum = parseInt(resolvedParams.year);
-        if (isNaN(yearNum)) return;
 
+        if (isNaN(yearNum)) {
+          console.error("Invalid year parameter:", resolvedParams.year);
+          return;
+        }
+
+        console.log("Setting year:", yearNum);
         setYear(yearNum);
 
         // Load budget data
+        console.log("Fetching yearly budget...");
         const budgetData = await fetchYearlyBudget(yearNum);
+        console.log("Budget data received:", budgetData);
+
+        if (!budgetData) {
+          console.error("No budget data received");
+          return;
+        }
+
         setTotalBudget(budgetData.total);
 
-        const categoryList = Object.entries(budgetData.categories).map(
+        const categoryList = Object.entries(budgetData.categories || {}).map(
           ([name, amount]) => ({
             name,
             amount,
           }),
         );
+        console.log("Setting categories:", categoryList);
         setCategories(categoryList);
 
         // Load progress data
+        console.log("Fetching budget progress...");
         const progress = await fetchBudgetProgress(yearNum);
+        console.log("Progress data received:", progress);
         setBudgetProgress(progress);
       } catch (error) {
         console.error("Error loading budget:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to load budget data",
+        );
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -258,68 +263,117 @@ export default function BudgetPage({
                       : "text-green-600"
                   }
                 >
-                  已用: ¥{budgetProgress.total.spent.toLocaleString()} (
-                  {budgetProgress.total.percentage.toFixed(2)}%)
+                  已用: ¥{budgetProgress.total.spent?.toLocaleString() ?? "0"} (
+                  {(budgetProgress.total.percentage ?? 0).toFixed(2)}%)
                 </span>
               )}
             </span>
           </div>
 
-          {budgetProgress?.total && (
-            <div className="mt-4 space-y-6">
-              {/* 饼图 */}
-              <div className="bg-white rounded-lg shadow-md p-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  预算分布
-                </h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={Object.entries(budgetProgress.categories || {})
-                          .filter(([_, data]) => data && data.budget > 0)
-                          .map(([name, data]) => ({
+          <div className="mt-4 space-y-6">
+            {/* 饼图 - Only show if we have categories with budget */}
+            {budgetProgress?.categories &&
+              Object.keys(budgetProgress.categories).length > 0 && (
+                <div className="bg-white rounded-lg shadow-md p-4">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    预算分布
+                  </h3>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={Object.entries(budgetProgress.categories || {})
+                            .filter(([_, data]) => data && data.budget > 0)
+                            .map(([name, data]) => ({
+                              name,
+                              value: data.budget,
+                              color: getCategoryColor(name),
+                            }))}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) =>
+                            `${name} ${(Number(percent) * 100).toFixed(1)}%`
+                          }
+                        >
+                          {Object.entries(budgetProgress.categories || {})
+                            .filter(([_, data]) => data && data.budget > 0)
+                            .map(([name]) => (
+                              <Cell
+                                key={`cell-${name}`}
+                                fill={getCategoryColor(name)}
+                              />
+                            ))}
+                        </Pie>
+                        <RechartsTooltip
+                          formatter={(value: number, name: string) => [
+                            `¥${value.toLocaleString()}`,
                             name,
-                            value: data.budget,
-                            color: getCategoryColor(name),
-                          }))}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) =>
-                          `${name} ${(Number(percent) * 100).toFixed(1)}%`
-                        }
-                      >
-                        {Object.entries(budgetProgress.categories || {})
-                          .filter(([_, data]) => data && data.budget > 0)
-                          .map(([name]) => (
-                            <Cell
-                              key={`cell-${name}`}
-                              fill={getCategoryColor(name)}
-                            />
-                          ))}
-                      </Pie>
-                      <RechartsTooltip
-                        formatter={(value: number, name: string) => [
-                          `¥${value.toLocaleString()}`,
-                          name,
-                        ]}
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+                          ]}
+                        />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <BudgetProgressBar
-                budgetProgress={budgetProgress}
-                getCategoryColor={getCategoryColor}
-              />
+            {/* Budget Progress Section */}
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                预算进度
+              </h2>
+
+              {isLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">加载预算数据中...</p>
+                </div>
+              ) : error ? (
+                <div className="bg-red-50 border-l-4 border-red-400 p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg
+                        className="h-5 w-5 text-red-400"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-red-700">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : budgetProgress ? (
+                <BudgetProgressBar
+                  budgetProgress={{
+                    categories: budgetProgress.categories || {},
+                    total: budgetProgress.total || {
+                      budget: 0,
+                      spent: 0,
+                      remaining: 0,
+                      percentage: 0,
+                      overBudget: false,
+                    },
+                  }}
+                  getCategoryColor={getCategoryColor}
+                />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  暂无预算数据
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Category Budgets */}
