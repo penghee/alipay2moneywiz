@@ -32,6 +32,7 @@ import ExpenseByWeekday from "@/components/ExpenseByWeekday";
 import ExpenseBreakdown from "@/components/ExpenseBreakdown";
 import TagBreakdown from "@/components/TaggedExpenseBreakdown";
 import { MonthlyStats } from "@/types/api";
+import { formatMoney } from "@/lib/utils";
 // Dynamically import client-side components
 const ThresholdSlider = dynamic(() => import("@/components/ThresholdSlider"), {
   ssr: false,
@@ -139,13 +140,6 @@ export default function MonthPage({
     fetchData();
   }, [params, selectedOwner]);
 
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat("zh-CN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -247,6 +241,9 @@ export default function MonthPage({
                 <p className="text-sm font-medium text-gray-600">收入</p>
                 <p className="text-2xl font-bold text-green-600">
                   ¥{formatMoney(stats.income)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  (工资: ¥{formatMoney(stats.totalSalary)})
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-green-600" />

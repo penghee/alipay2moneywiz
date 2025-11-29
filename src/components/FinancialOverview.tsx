@@ -7,80 +7,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
-  Cell,
-  LabelList,
-  TooltipProps,
+  Legend,
 } from "recharts";
 import type { MonthlyFinancials } from "@/lib/monthlyStats";
-
-type TooltipPayload = {
-  name: string;
-  value: number;
-  color: string;
-  payload: MonthlyFinancials;
-};
-
-interface CustomTooltipProps extends TooltipProps<number, string> {
-  active?: boolean;
-  payload?: TooltipPayload[];
-  label?: string;
-}
-
-interface CustomizedAxisTickProps {
-  x?: number;
-  y?: number;
-  payload?: {
-    value: string;
-  };
-}
-
-const COLORS = {
-  expense: "#EF4444",
-  salary: "#10B981",
-  balance: "#3B82F6",
-};
-
-const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
-        <p className="font-medium text-gray-900">{label}</p>
-        {payload.map((entry, index) => (
-          <p key={`tooltip-${index}`} style={{ color: entry.color }}>
-            {entry.name}: ¥{entry.value.toLocaleString()}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
-};
-
-const CustomizedAxisTick = ({
-  x = 0,
-  y = 0,
-  payload,
-}: CustomizedAxisTickProps) => {
-  if (!payload) return null;
-
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <text
-        x={0}
-        y={0}
-        dy={16}
-        textAnchor="end"
-        fill="#666"
-        transform="rotate(-45)"
-        className="text-xs"
-      >
-        {payload.value}
-      </text>
-    </g>
-  );
-};
 
 export default function FinancialOverview() {
   const [data, setData] = useState<MonthlyFinancials[]>([]);
@@ -140,10 +70,6 @@ export default function FinancialOverview() {
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-6">
-        近12个月财务概览
-      </h2>
-
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-red-50 p-4 rounded-lg">
@@ -182,11 +108,7 @@ export default function FinancialOverview() {
             <Tooltip
               formatter={(value: number, name: string) => [
                 `¥${value.toLocaleString()}`,
-                name === "income"
-                  ? "收入"
-                  : name === "expenses"
-                    ? "支出"
-                    : "结余",
+                name,
               ]}
             />
             <Line
@@ -210,6 +132,20 @@ export default function FinancialOverview() {
               stroke="#3b82f6"
               strokeWidth={2}
             />
+            <Line
+              type="monotone"
+              dataKey="salary"
+              name="工资"
+              stroke="#ec4899"
+              strokeWidth={2}
+            />
+            <Tooltip
+              formatter={(value: number, name: string) => [
+                `¥${value.toLocaleString()}`,
+                name,
+              ]}
+            />
+            <Legend />
           </LineChart>
         </ResponsiveContainer>
       </div>

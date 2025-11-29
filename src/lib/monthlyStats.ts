@@ -27,13 +27,10 @@ export async function getLast12MonthsFinancials(): Promise<
 
       // Only add to result if we have data for this month
       if (stats.expense > 0 || stats.income > 0) {
-        // Calculate salary income (income with category '工资' or 'salary')
-        const salary = stats.salary.reduce((sum, exp) => sum + exp.amount, 0);
-
         result.unshift({
           month: format(date, "yyyy-MM"),
           expenses: stats.expense,
-          salary,
+          salary: stats.totalSalary,
           income: stats.income,
           balance: stats.income - stats.expense,
         });

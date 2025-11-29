@@ -27,14 +27,6 @@ export interface Transaction {
   账单人?: string;
 }
 
-// 格式化金额
-export function formatMoney(amount: number): string {
-  return new Intl.NumberFormat("zh-CN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Math.abs(amount));
-}
-
 // 读取CSV文件
 export function readCSV(filePath: string): Transaction[] {
   const content = readFileSync(filePath, "utf8");
@@ -118,9 +110,9 @@ export function calculateMonthlyStats(
 
   let income = 0;
   let expense = 0;
+  let totalSalary = 0;
   const categoryStats: Record<string, CategoryStats> = {};
   const expenses: Expense[] = [];
-  const salary: Expense[] = [];
 
   transactions.forEach((t, index) => {
     // Skip transactions that don't match the owner filter
@@ -136,14 +128,7 @@ export function calculateMonthlyStats(
 
     // Add salary transactions to salary array (positive amount for income)
     if (["工资", "salary"].includes(category) && amount > 0) {
-      salary.push({
-        id: `${year}-${String(month).padStart(2, "0")}-salary-${index}`,
-        amount: amount,
-        category: category,
-        date: t.日期,
-        description: t.描述 || t.交易对方 || "工资收入",
-        tags: t.标签 || "",
-      });
+      totalSalary += amount;
     }
 
     if (amount > 0) {
@@ -181,7 +166,7 @@ export function calculateMonthlyStats(
     categoryStats,
     totalTransactions: transactions.length,
     expenses,
-    salary,
+    totalSalary,
   };
 }
 
@@ -206,12 +191,15 @@ export function calculateYearlyStats(
 
   let totalIncome = 0;
   let totalExpense = 0;
+  let totalSalary = 0;
+
   const categoryStats: Record<string, CategoryStats> = {};
   const monthlyData: Array<{
     month: number;
     income: number;
     expense: number;
     balance: number;
+    salary: number;
   }> = [];
 
   for (const file of csvFiles) {
@@ -221,6 +209,7 @@ export function calculateYearlyStats(
 
     let monthIncome = 0;
     let monthExpense = 0;
+    let monthSalary = 0;
 
     transactions.forEach((t) => {
       // Skip transactions that don't match the owner filter
@@ -250,16 +239,21 @@ export function calculateYearlyStats(
         categoryStats[category].amount += Math.abs(amount);
         categoryStats[category].count += 1;
       }
+      if (category === "工资") {
+        monthSalary += Math.abs(amount);
+      }
     });
 
     totalIncome += monthIncome;
     totalExpense += monthExpense;
+    totalSalary += monthSalary;
 
     monthlyData.push({
       month,
       income: monthIncome,
       expense: monthExpense,
       balance: monthIncome - monthExpense,
+      salary: monthSalary,
     });
   }
 
@@ -301,6 +295,7 @@ export function calculateYearlyStats(
     categoryStats,
     monthlyData,
     expenses,
+    totalSalary,
   } as YearlyStats;
 }
 

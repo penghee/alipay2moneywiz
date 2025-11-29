@@ -19,7 +19,7 @@ import {
 } from "recharts";
 import { formatDate } from "date-fns";
 import { CategoryYearlyStats } from "@/types/api";
-
+import { formatMoney } from "@/lib/utils";
 // 固定分类
 const FIXED_CATEGORIES = ["住房", "交通", "医疗"];
 
@@ -73,13 +73,6 @@ export default function CategoryPage({
 
     fetchData();
   }, [params, selectedOwner]);
-
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat("zh-CN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(Math.abs(amount));
-  };
 
   const toggleCategory = (category: string) => {
     const newSelected = new Set(selectedCategories);

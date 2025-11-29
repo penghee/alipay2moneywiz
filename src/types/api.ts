@@ -54,23 +54,15 @@ export interface YearlyStats {
     balance: number;
     totalIncome?: number;
     totalExpense?: number;
+    salary?: number;
   }>;
   expenses?: Expense[];
+  totalSalary?: number;
 }
 
 export interface MonthlyCategoryStats {
   amount: number;
   count: number;
-}
-
-export interface MonthlyStats {
-  income: number;
-  expense: number;
-  balance: number;
-  expenses: Expense[];
-  salary: Expense[];
-  categoryStats: Record<string, MonthlyCategoryStats>;
-  totalTransactions: number;
 }
 
 export interface CategoryStats {
@@ -83,9 +75,9 @@ export interface MonthlyStats {
   expense: number;
   balance: number;
   expenses: Expense[];
-  salary: Expense[];
   categoryStats: Record<string, CategoryStats>;
   totalTransactions: number;
+  totalSalary: number;
 }
 
 export interface Expense {
