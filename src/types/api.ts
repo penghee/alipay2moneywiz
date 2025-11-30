@@ -58,6 +58,10 @@ export interface YearlyStats {
   }>;
   expenses?: Expense[];
   totalSalary?: number;
+  sankeyData?: {
+    nodes: Array<{ name: string }>;
+    links: Array<{ source: number; target: number; value: number }>;
+  };
 }
 
 export interface MonthlyCategoryStats {
@@ -78,6 +82,10 @@ export interface MonthlyStats {
   categoryStats: Record<string, CategoryStats>;
   totalTransactions: number;
   totalSalary: number;
+  sankeyData?: {
+    nodes: Array<{ name: string }>;
+    links: Array<{ source: number; target: number; value: number }>;
+  };
 }
 
 export interface Expense {

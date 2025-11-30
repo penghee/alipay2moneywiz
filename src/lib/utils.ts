@@ -6,6 +6,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // 格式化金额
+// Get current year
+export function getCurrentYear(): number {
+  return new Date().getFullYear();
+}
+
 export function formatMoney(amount?: number): string {
   if (!amount) return "0.00";
   return new Intl.NumberFormat("zh-CN", {

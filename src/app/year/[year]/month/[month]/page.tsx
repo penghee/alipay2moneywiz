@@ -33,6 +33,7 @@ import ExpenseBreakdown from "@/components/ExpenseBreakdown";
 import TagBreakdown from "@/components/TaggedExpenseBreakdown";
 import { MonthlyStats } from "@/types/api";
 import { formatMoney } from "@/lib/utils";
+import SankeyChart from "@/components/charts/SankeyChart";
 // Dynamically import client-side components
 const ThresholdSlider = dynamic(() => import("@/components/ThresholdSlider"), {
   ssr: false,
@@ -389,6 +390,17 @@ export default function MonthPage({
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+
+        {/* Sankey Chart */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <BarChart3 className="h-5 w-5 mr-2" />
+            月度支出流向
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <SankeyChart data={stats.sankeyData} />
+          </ResponsiveContainer>
         </div>
 
         {/* Top Expenses Table */}

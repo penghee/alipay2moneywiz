@@ -24,7 +24,7 @@ interface SankeyData {
 }
 
 interface SankeyChartProps {
-  data: {
+  data?: {
     nodes: Array<{ name: string }>;
     links: Array<{ source: number; target: number; value: number }>;
   };

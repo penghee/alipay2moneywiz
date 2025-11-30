@@ -48,6 +48,7 @@ import {
 import { YearlyStats } from "@/types/api";
 import YearSummaryCards from "@/components/YearSummaryCards";
 import { getCategoryColor, COLOR_PALETTE } from "@/lib/colors";
+import SankeyChart from "@/components/charts/SankeyChart";
 
 export default function YearPage({
   params,
@@ -357,6 +358,17 @@ export default function YearPage({
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+
+        {/* Sankey Chart */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <BarChart3 className="h-5 w-5 mr-2" />
+            年度支出流向
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <SankeyChart data={stats.sankeyData} />
+          </ResponsiveContainer>
         </div>
 
         {/* Category Details Table */}

@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, existsSync } from "fs";
 import path from "path";
 import ownersData from "@/config/bill_owners.json";
 import { getDataDirectory, getYearDataDirectory } from "@/config/paths";
+import { generateSankeyData } from "./sankeyUtils";
 import {
   MonthlyStats,
   Expense,
@@ -159,6 +160,16 @@ export function calculateMonthlyStats(
     }
   });
 
+  // Generate Sankey data
+  const otherIncome = Math.max(0, income - totalSalary);
+  const sankeyData = generateSankeyData({
+    categoryStats,
+    totalIncome: income,
+    totalExpense: expense,
+    totalSalary,
+    otherIncome,
+  });
+
   return {
     income,
     expense,
@@ -167,6 +178,7 @@ export function calculateMonthlyStats(
     totalTransactions: expenses.length,
     expenses,
     totalSalary,
+    sankeyData,
   };
 }
 
@@ -201,6 +213,8 @@ export function calculateYearlyStats(
     balance: number;
     salary: number;
   }> = [];
+  // Prepare expenses data
+  const expenses: Expense[] = [];
 
   for (const file of csvFiles) {
     const month = parseInt(file.replace(".csv", ""));
@@ -211,7 +225,27 @@ export function calculateYearlyStats(
     let monthExpense = 0;
     let monthSalary = 0;
 
-    transactions.forEach((t) => {
+    transactions.forEach((t, index) => {
+      const amount = parseFloat(t["金额"]);
+      // Skip transactions that don't match the owner filter
+      if (ownerId && ownerId !== "all") {
+        const ownerName = getOwnerName(ownerId);
+        // Check both owner fields for backward compatibility
+        if (t.owner !== ownerName && t["账单人"] !== ownerName) {
+          return;
+        }
+      }
+      if (amount < 0) {
+        // Only include expenses (negative amounts)
+        expenses.push({
+          id: `${year}-${String(month).padStart(2, "0")}-${index}`,
+          amount: Math.abs(amount), // Store as positive for consistency
+          category: t["分类"],
+          date: t["日期"],
+          description: t["描述"] || t["交易对方"] || "无描述",
+          tags: t["标签"] || "",
+        });
+      }
       // Skip transactions that don't match the owner filter
       if (ownerId && ownerId !== "all") {
         const ownerName = getOwnerName(ownerId);
@@ -221,7 +255,6 @@ export function calculateYearlyStats(
         }
       }
 
-      const amount = parseFloat(t["金额"]);
       const category = t["分类"];
 
       if (amount > 0) {
@@ -257,36 +290,13 @@ export function calculateYearlyStats(
     });
   }
 
-  // Prepare expenses data
-  const expenses: Expense[] = [];
-  for (const file of csvFiles) {
-    const month = parseInt(file.replace(".csv", ""));
-    const filePath = path.join(dataDir, file);
-    const transactions = readCSV(filePath);
-
-    transactions.forEach((t, index) => {
-      const amount = parseFloat(t["金额"]);
-      // Skip transactions that don't match the owner filter
-      if (ownerId && ownerId !== "all") {
-        const ownerName = getOwnerName(ownerId);
-        // Check both owner fields for backward compatibility
-        if (t.owner !== ownerName && t["账单人"] !== ownerName) {
-          return;
-        }
-      }
-      if (amount < 0) {
-        // Only include expenses (negative amounts)
-        expenses.push({
-          id: `${year}-${String(month).padStart(2, "0")}-${index}`,
-          amount: Math.abs(amount), // Store as positive for consistency
-          category: t["分类"],
-          date: t["日期"],
-          description: t["描述"] || t["交易对方"] || "无描述",
-          tags: t["标签"] || "",
-        });
-      }
-    });
-  }
+  const sankeyData = generateSankeyData({
+    categoryStats,
+    totalIncome,
+    totalExpense,
+    totalSalary,
+    otherIncome: Math.max(0, totalIncome - totalSalary),
+  });
 
   return {
     totalIncome,
@@ -296,6 +306,7 @@ export function calculateYearlyStats(
     monthlyData,
     expenses,
     totalSalary,
+    sankeyData,
   } as YearlyStats;
 }
 
