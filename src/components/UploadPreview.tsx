@@ -18,8 +18,10 @@ interface EditableTransaction extends TransactionPreview {
 
 export default function UploadPreview({
   expenses = [],
+  onDelete,
 }: {
   expenses?: EditableTransaction[];
+  onDelete?: (index: number) => void;
 }) {
   const [editableExpenses, setEditableExpenses] =
     useState<EditableTransaction[]>(expenses);
@@ -59,6 +61,17 @@ export default function UploadPreview({
       expenses[index].onUpdate!("标签", value);
     }
   };
+
+  const handleDelete = (index: number) => {
+    const updated = [...editableExpenses];
+    updated.splice(index, 1);
+    setEditableExpenses(updated);
+
+    if (onDelete) {
+      onDelete(index);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-8">
       <div className="overflow-x-auto">
@@ -82,6 +95,9 @@ export default function UploadPreview({
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 备注
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                操作
               </th>
             </tr>
           </thead>
@@ -158,6 +174,14 @@ export default function UploadPreview({
                     className="h-8 text-sm border-gray-300 focus-visible:ring-1 focus-visible:ring-blue-500"
                     placeholder="添加备注"
                   />
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <button
+                    onClick={() => handleDelete(index)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    删除
+                  </button>
                 </td>
               </tr>
             ))}

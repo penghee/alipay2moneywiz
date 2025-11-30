@@ -14,6 +14,7 @@ interface PreviewDialogProps {
     field: keyof TransactionPreview,
     value: string,
   ) => void;
+  onDelete: (index: number) => void;
 }
 
 export default function PreviewDialog({
@@ -24,6 +25,7 @@ export default function PreviewDialog({
   isSaving,
   editableTransactions,
   onTransactionUpdate,
+  onDelete,
 }: PreviewDialogProps) {
   // Close on escape key
   useEffect(() => {
@@ -72,6 +74,7 @@ export default function PreviewDialog({
                 id: index.toString(),
                 onUpdate: (field: keyof TransactionPreview, value: string) =>
                   onTransactionUpdate(index, field, value),
+                onDelete: (index: number) => onDelete(index),
               }))}
             />
           </div>

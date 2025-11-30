@@ -172,6 +172,14 @@ export default function ImportPage() {
     });
   };
 
+  const handleDelete = (index: number) => {
+    setEditableTransactions((prev) => {
+      const updated = [...prev];
+      updated.splice(index, 1);
+      return updated;
+    });
+  };
+
   const handleViewStats = () => {
     if (result) {
       router.push(`/`);
@@ -298,6 +306,7 @@ export default function ImportPage() {
             isSaving={isSaving}
             editableTransactions={editableTransactions}
             onTransactionUpdate={handleTransactionUpdate}
+            onDelete={handleDelete}
           />
         )}
 
