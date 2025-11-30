@@ -21,10 +21,16 @@ export async function GET(
     // Get owner from query parameters
     const { searchParams } = new URL(request.url);
     const ownerId = searchParams.get("owner") || "all";
+    // filterUnexpected is not 0 or undefined
+    const filterUnexpectedParam = searchParams.get("filterUnexpected");
+    const filterUnexpected = Boolean(
+      filterUnexpectedParam && filterUnexpectedParam !== "0",
+    );
 
     const stats = calculateCategoryYearlyStats(
       year,
       ownerId !== "all" ? ownerId : undefined,
+      filterUnexpected,
     );
     return NextResponse.json(stats);
   } catch (error) {

@@ -428,6 +428,7 @@ export function getAvailableMonths(year: number, ownerId?: string): number[] {
 export function calculateCategoryYearlyStats(
   year: number,
   ownerId?: string,
+  filterUnexpected?: boolean,
 ): CategoryYearlyStats {
   const dataDir = getYearDataDirectory(year);
 
@@ -459,6 +460,11 @@ export function calculateCategoryYearlyStats(
         const ownerName = getOwnerName(ownerId);
         // Check both owner fields for backward compatibility
         if (t.owner !== ownerName && t["账单人"] !== ownerName) {
+          return;
+        }
+      }
+      if (filterUnexpected) {
+        if (t["标签"]?.includes("预算外")) {
           return;
         }
       }
@@ -516,6 +522,11 @@ export function calculateCategoryYearlyStats(
     if (ownerId) {
       const ownerName = getOwnerName(ownerId);
       if (tx.owner !== ownerName && tx["账单人"] !== ownerName) {
+        continue;
+      }
+    }
+    if (filterUnexpected) {
+      if (tx["标签"]?.includes("预算外")) {
         continue;
       }
     }

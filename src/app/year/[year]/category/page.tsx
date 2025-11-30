@@ -3,7 +3,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { apiClient } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, TrendingUp, BarChart3, Table2, User } from "lucide-react";
+import {
+  ArrowLeft,
+  TrendingUp,
+  BarChart3,
+  Table2,
+  User,
+  Filter,
+} from "lucide-react";
 import ownersData from "@/config/bill_owners.json";
 import {
   LineChart,
@@ -36,6 +43,8 @@ export default function CategoryPage({
   );
   const [topExpensesLimit, setTopExpensesLimit] = useState<number>(20);
   const [selectedOwner, setSelectedOwner] = useState<string>("all");
+  const [selectedFilterUnexpected, setSelectedFilterUnexpected] =
+    useState<string>("all");
   const router = useRouter();
 
   const owners = useMemo(
@@ -60,6 +69,7 @@ export default function CategoryPage({
         const data = await apiClient.getCategoryStats(
           yearNum,
           selectedOwner !== "all" ? selectedOwner : undefined,
+          selectedFilterUnexpected !== "all",
         );
         setStats(data);
         // 默认选择前5个分类
@@ -72,7 +82,7 @@ export default function CategoryPage({
     };
 
     fetchData();
-  }, [params, selectedOwner]);
+  }, [params, selectedOwner, selectedFilterUnexpected]);
 
   const fitleredExpenses = useMemo(() => {
     if (!stats) return [];
@@ -285,6 +295,17 @@ export default function CategoryPage({
                     {owner.name}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div className="flex items-center space-x-2 ml-4">
+              <Filter className="h-5 w-5 text-gray-500" />
+              <select
+                value={selectedFilterUnexpected}
+                onChange={(e) => setSelectedFilterUnexpected(e.target.value)}
+                className="w-32 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">不过滤</option>
+                <option value="unexpected">过滤预算外</option>
               </select>
             </div>
           </div>

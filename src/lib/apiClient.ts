@@ -214,10 +214,18 @@ export class ApiClient {
   async getCategoryStats(
     year: number,
     owner?: string,
+    filterUnexpected?: boolean,
   ): Promise<CategoryYearlyStats> {
+    const searchParams = new URLSearchParams();
+    if (owner && owner !== "all") {
+      searchParams.append("owner", owner);
+    }
+    if (filterUnexpected) {
+      searchParams.append("filterUnexpected", "true");
+    }
     const url =
       `/api/stats/category/${year}` +
-      (owner ? `?owner=${encodeURIComponent(owner)}` : "");
+      (searchParams.toString() ? `?${searchParams.toString()}` : "");
     return this.request<CategoryYearlyStats>(url);
   }
 
