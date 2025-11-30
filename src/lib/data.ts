@@ -164,7 +164,7 @@ export function calculateMonthlyStats(
     expense,
     balance: income - expense,
     categoryStats,
-    totalTransactions: transactions.length,
+    totalTransactions: expenses.length,
     expenses,
     totalSalary,
   };

@@ -11,7 +11,7 @@ export function formatMoney(amount?: number): string {
   return new Intl.NumberFormat("zh-CN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(Math.abs(amount));
+  }).format(amount);
 }
 
 export const COLORS = [
