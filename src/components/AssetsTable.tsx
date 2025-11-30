@@ -20,7 +20,7 @@ type SubcategoryMap = {
     [key: string]: string[];
   };
 };
-
+const ASSET_TYPES = ["资产", "负债"];
 // Category and subcategory constants
 const CATEGORIES: CategoryMap = {
   资产: ["活期", "投资", "固定资产", "应收", "其他"],
@@ -154,13 +154,7 @@ export function AssetsTable({
   const [assets, setAssets] = useState<Asset[]>(initialAssets);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedAsset, setEditedAsset] = useState<Partial<Asset>>({});
-  const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Filter and sort assets
-  const filteredAssets = useMemo(() => {
-    return [...assets];
-  }, [assets]);
 
   // Update local state when initialAssets prop changes
   useEffect(() => {
@@ -193,7 +187,7 @@ export function AssetsTable({
 
   const handleSave = async () => {
     if (!editingId) return;
-
+    // Update the asset in the list
     const updatedAssets = initialAssets.map((asset) =>
       asset.id === editingId
         ? {
@@ -207,6 +201,18 @@ export function AssetsTable({
           }
         : asset,
     );
+
+    // add new add
+    const isExistingAsset = initialAssets.some(
+      (asset) => asset.id === editingId,
+    );
+    if (!isExistingAsset) {
+      const newAsset = {
+        ...editedAsset,
+        id: `new-${Date.now()}`,
+      };
+      updatedAssets.push(newAsset as Asset);
+    }
 
     setIsSaving(true);
     try {
@@ -295,7 +301,22 @@ export function AssetsTable({
               <TableRow key={asset.id}>
                 {editingId === asset.id ? (
                   <>
-                    <TableCell>{editedAsset?.type || ""}</TableCell>
+                    <TableCell>
+                      <select
+                        value={editedAsset?.type || ""}
+                        onChange={(e) =>
+                          handleFieldChange("type", e.target.value)
+                        }
+                        className="w-[100px] p-2 border rounded-md"
+                      >
+                        <option value="">选择类型</option>
+                        {ASSET_TYPES.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </TableCell>
                     <TableCell>{editedAsset?.date}</TableCell>
                     <TableCell>
                       <select
@@ -336,8 +357,24 @@ export function AssetsTable({
                           ))}
                       </select>
                     </TableCell>
-                    <TableCell>{editedAsset?.name}</TableCell>
-                    <TableCell>{editedAsset?.account}</TableCell>
+                    <TableCell>
+                      <Input
+                        type="text"
+                        value={editedAsset?.name || ""}
+                        onChange={(e) =>
+                          handleFieldChange("name", e.target.value)
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="text"
+                        value={editedAsset?.account || ""}
+                        onChange={(e) =>
+                          handleFieldChange("account", e.target.value)
+                        }
+                      />
+                    </TableCell>
                     <TableCell>
                       <input
                         type="number"
