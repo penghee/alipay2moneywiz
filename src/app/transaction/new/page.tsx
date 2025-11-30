@@ -20,21 +20,23 @@ import { apiClient } from "@/lib/apiClient";
 import categoryMap from "@/config/category_map.json";
 import billOwnersData from "@/config/bill_owners.json";
 
+const defaultRecord = {
+  account: "储蓄卡",
+  transfer: "",
+  description: "",
+  counterparty: "",
+  category: "",
+  date: new Date().toISOString().split("T")[0],
+  note: "",
+  tags: "",
+  amount: "",
+  owner: "爸爸",
+  type: "expense", // 'expense' or 'income'
+};
+
 export default function NewTransactionPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    account: "",
-    transfer: "",
-    description: "",
-    counterparty: "",
-    category: "",
-    date: new Date().toISOString().split("T")[0],
-    note: "",
-    tags: "",
-    amount: "",
-    owner: "爸爸",
-    type: "expense", // 'expense' or 'income'
-  });
+  const [formData, setFormData] = useState(defaultRecord);
 
   // Get categories based on transaction type
   const categories =
@@ -109,15 +111,8 @@ export default function NewTransactionPage() {
         const currentType = formData.type;
         const currentOwner = formData.owner;
         setFormData({
-          account: "",
-          transfer: "",
-          description: "",
-          counterparty: "",
-          category: "",
+          ...defaultRecord,
           date: new Date().toISOString().split("T")[0],
-          note: "",
-          tags: "",
-          amount: "",
           owner: currentOwner,
           type: currentType,
         });
@@ -310,7 +305,6 @@ export default function NewTransactionPage() {
                   onChange={handleChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="交易的具体描述"
-                  required
                 />
               </div>
 
