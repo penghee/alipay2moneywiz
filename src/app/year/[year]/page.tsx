@@ -226,7 +226,7 @@ export default function YearPage({
         </div>
 
         {/* Summary Cards */}
-        <YearSummaryCards year={year} />
+        <YearSummaryCards year={year} selectedOwner={selectedOwner} />
 
         {/* Monthly Trend Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
