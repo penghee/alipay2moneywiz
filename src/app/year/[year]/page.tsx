@@ -19,6 +19,13 @@ import TagBreakdown from "@/components/TaggedExpenseBreakdown";
 import ExpenseByWeekday from "@/components/ExpenseByWeekday";
 import { formatMoney } from "@/lib/utils";
 
+const NAME_MAP: Record<string, string> = {
+  income: "收入",
+  expense: "支出",
+  balance: "结余",
+  salary: "工资",
+};
+
 // Dynamically import client-side components
 const ThresholdSlider = dynamic(() => import("@/components/ThresholdSlider"), {
   ssr: false,
@@ -40,6 +47,7 @@ import {
 } from "recharts";
 import { YearlyStats } from "@/types/api";
 import YearSummaryCards from "@/components/YearSummaryCards";
+import { getCategoryColor, COLOR_PALETTE } from "@/lib/colors";
 
 export default function YearPage({
   params,
@@ -149,10 +157,8 @@ export default function YearPage({
 
   const chartData =
     stats?.monthlyData?.map((data) => ({
+      ...data,
       month: `${data.month}月`,
-      income: data.income,
-      expense: data.expense,
-      balance: data.balance,
     })) || [];
 
   // 准备分类饼图数据
@@ -169,23 +175,10 @@ export default function YearPage({
           total: data.amount,
           percentage:
             Math.round((data.amount / (stats?.totalExpense || 0)) * 100) || 0,
+          color: getCategoryColor(category),
         }))
         .sort((a, b) => b.value - a.value)
     : [];
-
-  // 颜色配置
-  const COLORS = [
-    "#3b82f6",
-    "#ef4444",
-    "#10b981",
-    "#f59e0b",
-    "#8b5cf6",
-    "#06b6d4",
-    "#84cc16",
-    "#f97316",
-    "#ec4899",
-    "#6366f1",
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -244,11 +237,7 @@ export default function YearPage({
                 <Tooltip
                   formatter={(value: number, name: string) => [
                     `¥${formatMoney(value)}`,
-                    name === "income"
-                      ? "收入"
-                      : name === "expense"
-                        ? "支出"
-                        : "结余",
+                    NAME_MAP[name],
                   ]}
                 />
                 <Line
@@ -269,6 +258,12 @@ export default function YearPage({
                   stroke="#3b82f6"
                   strokeWidth={2}
                 />
+                <Line
+                  type="monotone"
+                  dataKey="salary"
+                  stroke="#8b5cf6"
+                  strokeWidth={2}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -287,11 +282,12 @@ export default function YearPage({
                 <Tooltip
                   formatter={(value: number, name: string) => [
                     `¥${formatMoney(value)}`,
-                    name === "income" ? "收入" : "支出",
+                    NAME_MAP[name],
                   ]}
                 />
                 <Bar dataKey="income" fill="#10b981" />
                 <Bar dataKey="expense" fill="#ef4444" />
+                <Bar dataKey="salary" fill="#8b5cf6" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -321,7 +317,7 @@ export default function YearPage({
                   {pieData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
+                      fill={COLOR_PALETTE[index % COLOR_PALETTE.length]}
                     />
                   ))}
                 </Pie>
