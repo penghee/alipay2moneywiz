@@ -140,6 +140,14 @@ export default function MonthPage({
     fetchData();
   }, [params, selectedOwner]);
 
+  const fitleredExpenses = useMemo(() => {
+    if (!stats) return [];
+    if (!topExpensesLimit) return stats.expenses;
+    return [...stats.expenses]
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, topExpensesLimit);
+  }, [stats, topExpensesLimit]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -388,7 +396,9 @@ export default function MonthPage({
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
               <Filter className="h-5 w-5 mr-2" />
-              单笔支出TOP {topExpensesLimit}
+              {topExpensesLimit === -1
+                ? `全部支出${stats.expenses.length}条`
+                : `单笔支出TOP ${topExpensesLimit}`}
             </h3>
             <div className="flex items-center">
               <label
@@ -403,6 +413,7 @@ export default function MonthPage({
                 onChange={(e) => setTopExpensesLimit(Number(e.target.value))}
                 className="block w-24 rounded-md border-gray-300 py-1 pl-2 pr-8 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
               >
+                <option value={-1}>全部</option>
                 <option value={20}>20 条</option>
                 <option value={50}>50 条</option>
                 <option value={100}>100 条</option>
@@ -430,39 +441,36 @@ export default function MonthPage({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {[...stats.expenses]
-                    .sort((a, b) => b.amount - a.amount)
-                    .slice(0, topExpensesLimit)
-                    .map((expense, index) => (
-                      <tr key={expense.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {expense.date}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div
-                              className="w-3 h-3 rounded-full mr-2"
-                              style={{
-                                backgroundColor:
-                                  COLORS[index % COLORS.length] || "#9CA3AF",
-                              }}
-                            ></div>
-                            <span className="text-sm text-gray-900">
-                              {expense.category}
-                            </span>
-                          </div>
-                        </td>
-                        <td
-                          className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate"
-                          title={expense.description}
-                        >
-                          {expense.description}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
-                          ¥{formatMoney(expense.amount)}
-                        </td>
-                      </tr>
-                    ))}
+                  {fitleredExpenses.map((expense, index) => (
+                    <tr key={expense.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {expense.date}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div
+                            className="w-3 h-3 rounded-full mr-2"
+                            style={{
+                              backgroundColor:
+                                COLORS[index % COLORS.length] || "#9CA3AF",
+                            }}
+                          ></div>
+                          <span className="text-sm text-gray-900">
+                            {expense.category}
+                          </span>
+                        </div>
+                      </td>
+                      <td
+                        className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate"
+                        title={expense.description}
+                      >
+                        {expense.description}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
+                        ¥{formatMoney(expense.amount)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

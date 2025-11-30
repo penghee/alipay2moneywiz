@@ -87,6 +87,7 @@ export interface Expense {
   date: string;
   description: string;
   tags: string;
+  remark?: string;
 }
 
 export interface CategoryMonthlyData {
@@ -145,10 +146,7 @@ export interface UploadResponse {
   success: boolean;
   message: string;
   count: number;
-  errors?: Array<{
-    row: number;
-    message: string;
-  }>;
+  error?: string;
 }
 
 export interface YearsResponse {
@@ -158,4 +156,27 @@ export interface YearsResponse {
 export interface MonthsResponse {
   year: number;
   months: number[];
+}
+
+export interface TransactionPreview {
+  日期: string;
+  描述: string;
+  账户: string;
+  交易对方: string;
+  分类: string;
+  转账: string;
+  金额: string;
+  标签: string;
+  备注: string;
+  账单人: string;
+}
+
+export interface PreviewUploadResponse {
+  success: boolean;
+  error?: string;
+  preview?: boolean;
+  total?: number;
+  platform?: string;
+  owner?: string;
+  transactions?: TransactionPreview[];
 }

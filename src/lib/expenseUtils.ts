@@ -1,4 +1,4 @@
-import { Expense } from "../types/expense";
+import { Expense } from "../types/api";
 
 export function filterExpensesByThreshold(
   expenses: Expense[],

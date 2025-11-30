@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Expense } from "../types/expense";
+import { Expense } from "../types/api";
 import { useThreshold } from "../contexts/ThresholdContext";
 import {
   filterExpensesByThreshold,

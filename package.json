@@ -9,7 +9,7 @@
     "lint": "eslint . --ext .ts,.tsx",
     "prepare": "husky install",
     "type-check": "tsc --noEmit",
-    "pre-commit": "npm run type-check && lint-staged"
+    "pre-commit": "pnpm run type-check && lint-staged"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.2.6",

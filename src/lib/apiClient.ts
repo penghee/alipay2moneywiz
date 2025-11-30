@@ -10,6 +10,8 @@ import type {
   YearsResponse,
   MonthsResponse,
   CategoryYearlyStats,
+  PreviewUploadResponse,
+  TransactionPreview,
 } from "@/types/api";
 import type { Asset, AssetSummary } from "@/types/asset";
 
@@ -244,6 +246,47 @@ export class ApiClient {
         message: response.statusText,
       }));
       throw new Error(error.message || "File upload failed");
+    }
+
+    return response.json() as Promise<UploadResponse>;
+  }
+
+  // ========== Upload Preview ==========
+  async uploadFilePreview(formData: FormData): Promise<PreviewUploadResponse> {
+    const response = await fetch("/api/upload/preview", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: response.statusText,
+      }));
+      throw new Error(error.message || "File upload preview failed");
+    }
+
+    return response.json() as Promise<PreviewUploadResponse>;
+  }
+
+  // ========== Upload Save ==========
+  async uploadFileSave(data: {
+    transactions: TransactionPreview[];
+    platform: string;
+    owner: string;
+  }): Promise<UploadResponse> {
+    const response = await fetch("/api/upload/save", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: response.statusText,
+      }));
+      throw new Error(error.message || "File save failed");
     }
 
     return response.json() as Promise<UploadResponse>;

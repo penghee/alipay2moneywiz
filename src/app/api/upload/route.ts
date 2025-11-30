@@ -12,7 +12,7 @@ import readline from "readline";
 export const dynamic = "force-dynamic"; // Prevent static generation
 
 // 读取映射文件
-function loadMaps() {
+export function loadMaps() {
   const accountMap = JSON.parse(
     readFileSync(DATA_PATHS.maps.account(), "utf8"),
   );
@@ -24,7 +24,7 @@ function loadMaps() {
 }
 
 // 解析日期
-function parseDate(dateStr: string): string {
+export function parseDate(dateStr: string): string {
   const date = new Date(dateStr);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -33,7 +33,7 @@ function parseDate(dateStr: string): string {
 }
 
 // 映射账户
-function mapAccount(
+export function mapAccount(
   recordStr: string,
   accountMap: Record<string, string>,
 ): string {
@@ -49,7 +49,7 @@ function mapAccount(
 }
 
 // 映射分类
-function mapCategory(
+export function mapCategory(
   transactionType: string,
   product: string,
   counterparty: string,
@@ -73,7 +73,7 @@ function mapCategory(
 }
 
 // 处理支付宝账单
-async function processAlipay(
+export async function processAlipay(
   content: File,
   accountMap: Record<string, string>,
   categoryMap: Record<string, string[]>,
@@ -165,7 +165,7 @@ async function processAlipay(
 }
 
 // 处理微信账单
-function processWechat(
+export function processWechat(
   content: Buffer,
   accountMap: Record<string, string>,
   categoryMap: Record<string, string[]>,
@@ -256,7 +256,7 @@ function processWechat(
 }
 
 // 按月份分组并保存交易数据
-function saveTransactionsByMonth(
+export function saveTransactionsByMonth(
   transactions: Record<string, string>[],
   platform: string,
   owner: string,
@@ -304,7 +304,7 @@ function saveTransactionsByMonth(
 }
 
 // 保存数据到指定年月
-function saveData(
+export function saveData(
   transactions: Record<string, string>[],
   year: number,
   month: number,
@@ -332,54 +332,54 @@ function saveData(
   const filepath = path.join(yearDir, filename);
 
   // 检查文件是否存在并读取现有数据
-  let existingData: Record<string, string>[] = [];
-  try {
-    const content = readFileSync(filepath, "utf8");
-    if (content.trim()) {
-      const parsedData = parse(content, {
-        columns: true,
-        skip_empty_lines: true,
-      }) as Record<string, string>[];
+  // let existingData: Record<string, string>[] = [];
+  // try {
+  //   const content = readFileSync(filepath, "utf8");
+  //   if (content.trim()) {
+  //     const parsedData = parse(content, {
+  //       columns: true,
+  //       skip_empty_lines: true,
+  //     }) as Record<string, string>[];
 
-      // Convert to the correct type and ensure all records have the bill owner field
-      existingData = parsedData.map((record) => ({
-        ...record,
-        账单人: record["账单人"] || owner,
-      }));
+  //     // Convert to the correct type and ensure all records have the bill owner field
+  //     existingData = parsedData.map((record) => ({
+  //       ...record,
+  //       账单人: record["账单人"] || owner,
+  //     }));
 
-      // 确保现有数据有账单人字段
-      existingData = existingData.map((record) => ({
-        ...record,
-        账单人: record["账单人"] || owner,
-      }));
-    }
-  } catch (error) {
-    // 文件不存在或其他错误，继续使用空数组
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.error("Error reading existing data:", error);
-    }
-  }
+  //     // 确保现有数据有账单人字段
+  //     existingData = existingData.map((record) => ({
+  //       ...record,
+  //       账单人: record["账单人"] || owner,
+  //     }));
+  //   }
+  // } catch (error) {
+  //   // 文件不存在或其他错误，继续使用空数组
+  //   if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+  //     console.error("Error reading existing data:", error);
+  //   }
+  // }
 
   // 合并现有数据和新数据
-  const allData = [...existingData, ...transactions];
+  // const allData = [...existingData, ...transactions];
 
-  // 保存数据
-  const output = stringify(allData, {
-    header: true,
-    columns: [
-      "账户",
-      "转账",
-      "描述",
-      "交易对方",
-      "分类",
-      "日期",
-      "备注",
-      "标签",
-      "金额",
-      "账单人",
-    ],
-  });
-  writeFileSync(filepath, output);
+  // // 保存数据
+  // const output = stringify(allData, {
+  //   header: true,
+  //   columns: [
+  //     "账户",
+  //     "转账",
+  //     "描述",
+  //     "交易对方",
+  //     "分类",
+  //     "日期",
+  //     "备注",
+  //     "标签",
+  //     "金额",
+  //     "账单人",
+  //   ],
+  // });
+  // writeFileSync(filepath, output);
 
   // 合并到月份文件
   const monthPath = path.join(yearDir, `${monthStr}.csv`);

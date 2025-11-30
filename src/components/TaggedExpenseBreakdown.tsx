@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Expense } from "../types/expense";
+import { Expense } from "../types/api";
 import { getExpenseSummary } from "../lib/expenseUtils";
 
 interface TaggedExpenseBreakdownProps {
