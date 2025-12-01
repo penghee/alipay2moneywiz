@@ -1,7 +1,10 @@
 {
-  "name": "app",
+  "name": "alipay2moneywiz",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "nodejs-mcp"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,7 +12,9 @@
     "lint": "eslint . --ext .ts,.tsx",
     "prepare": "husky install",
     "type-check": "tsc --noEmit",
-    "pre-commit": "pnpm run type-check && lint-staged"
+    "pre-commit": "pnpm run type-check && lint-staged",
+    "mcp:dev": "pnpm --filter @workspace/csv-reader-mcp dev",
+    "mcp:start": "pnpm --filter @workspace/csv-reader-mcp start"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.2.6",

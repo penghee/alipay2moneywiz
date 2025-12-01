@@ -1,0 +1,79 @@
+{
+  "servers": [
+    {
+      "name": "csv-reader-mcp",
+      "command": "node",
+      "args": ["${workspaceFolder}/index.js"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "transport": {
+        "type": "stdio"
+      },
+      "toolDefinitions": [
+        {
+          "name": "list_csv_files",
+          "description": "List all CSV files in the data directory"
+        },
+        {
+          "name": "read_csv",
+          "description": "Read a CSV file and return its contents as a JSON array",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string",
+                "description": "Name of the CSV file to read (e.g., 'data.csv')"
+              }
+            },
+            "required": ["filename"]
+          }
+        },
+        {
+          "name": "query_csv",
+          "description": "Query a CSV file with filtering and column selection",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string",
+                "description": "Name of the CSV file to read"
+              },
+              "limit": {
+                "type": "number",
+                "description": "Maximum number of rows to return (default: all)"
+              },
+              "columns": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "List of column names to include (default: all)"
+              },
+              "filter": {
+                "type": "object",
+                "description": "Key-value pairs to filter rows (e.g., {\"status\": \"active\"})"
+              }
+            },
+            "required": ["filename"]
+          }
+        },
+        {
+          "name": "get_csv_schema",
+          "description": "Get the schema of a CSV file with sample data",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string",
+                "description": "Name of the CSV file"
+              }
+            },
+            "required": ["filename"]
+          }
+        }
+      ]
+    }
+  ]
+}
