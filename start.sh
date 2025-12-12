@@ -14,8 +14,8 @@ if [ ! -d "./data" ]; then
     echo ""
 fi
 # 确保 npm install
-npm install
-npm run build
+# npm install
+# npm run build
 
 # 启动服务器
 npm run start

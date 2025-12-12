@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import categoryMap from "@/config/category_map.json";
+import billOwnersData from "@/config/bill_owners.json";
 
 interface EditableTransaction extends TransactionPreview {
   onUpdate?: (field: keyof TransactionPreview, value: string) => void;
@@ -35,6 +36,18 @@ export default function UploadPreview({
     // Call onUpdate from the original expense item to update parent state
     if (expenses[index]?.onUpdate) {
       expenses[index].onUpdate!("分类", value);
+    }
+  };
+
+  const handleBillOwnerChange = (index: number, value: string) => {
+    const updated = [...editableExpenses];
+    const updatedExpense = { ...updated[index], 账单人: value };
+    updated[index] = updatedExpense;
+    setEditableExpenses(updated);
+
+    // Call onUpdate from the original expense item to update parent state
+    if (expenses[index]?.onUpdate) {
+      expenses[index].onUpdate!("账单人", value);
     }
   };
 
@@ -83,6 +96,9 @@ export default function UploadPreview({
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 分类
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                账单人
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 描述
@@ -136,6 +152,34 @@ export default function UploadPreview({
                               {category}
                             </SelectItem>
                           ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div
+                      className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
+                      style={{
+                        backgroundColor:
+                          COLORS[index % COLORS.length] || "#9CA3AF",
+                      }}
+                    ></div>
+                    <Select
+                      value={expense["账单人"]}
+                      onValueChange={(value) =>
+                        handleBillOwnerChange(index, value)
+                      }
+                    >
+                      <SelectTrigger className="w-full border-0 p-0 h-auto text-sm font-medium bg-transparent hover:bg-gray-100 rounded">
+                        <SelectValue placeholder="选择账单人" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {billOwnersData.owners.map((owner) => (
+                          <SelectItem key={owner.id} value={owner.name}>
+                            {owner.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

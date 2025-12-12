@@ -488,12 +488,71 @@ Example Query:
   }
 );
 
+
+// Tool: Get Latest Asset Data
+server.registerTool(
+  "get_latest_assets",
+  {
+    description: "Get the latest asset data including bank accounts, investments, and other assets.",
+  },
+  async () => {
+    try {
+      const assetsPath = path.join(__dirname, "../assets/assets.csv");
+      
+      // Check if file exists
+      if (!fs.existsSync(assetsPath)) {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              error: "Assets file not found",
+              path: assetsPath
+            }, null, 2),
+          }],
+        };
+      }
+
+      // Read and parse the CSV
+      const content = fs.readFileSync(assetsPath, 'utf-8');
+      const records = parse(content, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+      });
+
+      // Process and return the data
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            status: 'success',
+            lastUpdated: fs.statSync(assetsPath).mtime,
+            totalAssets: records.length,
+            assets: records
+          }, null, 2),
+        }],
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            status: 'error',
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+          }, null, 2),
+        }],
+      };
+    }
+  }
+);
+
 // Start the server
 async function main() {
   ensureDataDir();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("✅ CSV Reader MCP Server is ready!");
+  console.info("✅ CSV Reader MCP Server is ready!");
 }
 
 main().catch((error) => {
