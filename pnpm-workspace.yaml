@@ -1,3 +1,4 @@
 packages:
   - '.'  # Root package
   - 'nodejs-mcp'  # Any additional packages
+  - 'obsidian-reader'  # Obsidian reader package
