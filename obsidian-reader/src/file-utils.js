@@ -63,17 +63,40 @@ async function listFiles(rootDir, options = {}) {
  */
 async function searchFiles(rootDir, options = {}) {
   const { query = '', filename = '', after, before } = options;
-  const files = await listFiles(rootDir, { pattern: filename ? `**/*${filename}*.md` : '**/*.md' });
   
+  // 首先获取所有 markdown 文件
+  const files = await listFiles(rootDir, { pattern: '**/*.md' });
+  
+  // 过滤文件
   const filteredFiles = files.filter(file => {
+    // 按修改时间过滤
     if (after && new Date(file.modifiedAt) < new Date(after)) return false;
     if (before && new Date(file.modifiedAt) > new Date(before)) return false;
+    
+    // 按文件名过滤（支持模糊匹配）
+    if (filename) {
+      const normalizedPath = file.path.toLowerCase().normalize('NFKC');
+      const searchTerm = filename.toLowerCase().normalize('NFKC');
+      // Remove all spaces for better matching
+      const normalizedSearch = searchTerm.replace(/\s+/g, '');
+      const normalizedPathNoSpaces = normalizedPath.replace(/\s+/g, '');
+      
+      if (!normalizedPathNoSpaces.includes(normalizedSearch)) {
+        return false;
+      }
+    }
+    
     return true;
   });
 
+  // 如果没有搜索词，直接返回过滤后的文件列表
   if (!query) return filteredFiles;
 
   const results = [];
+  // Normalize and clean the query
+  const normalizedQuery = query.toLowerCase()
+    .normalize('NFKC')
+    .replace(/\s+/g, '');
   
   for (const file of filteredFiles) {
     try {
@@ -81,8 +104,27 @@ async function searchFiles(rootDir, options = {}) {
       const lines = content.split('\n');
       const matches = [];
       
+      // 检查文件名是否匹配
+      const normalizedPath = file.path.toLowerCase()
+        .normalize('NFKC')
+        .replace(/\s+/g, '');
+      if (normalizedPath.includes(normalizedQuery)) {
+        matches.push({
+          line: 0,
+          content: `文件名匹配: ${path.basename(file.path)}`,
+          snippet: [{
+            line: 0,
+            content: `文件路径: ${file.path}`,
+            isMatch: true
+          }]
+        });
+      }
+
+      // 检查文件内容
+      const normalizedContentQuery = query.toLowerCase().normalize('NFKC');
       lines.forEach((line, index) => {
-        if (line.toLowerCase().includes(query.toLowerCase())) {
+        const normalizedLine = line.toLowerCase().normalize('NFKC');
+        if (normalizedLine.includes(normalizedContentQuery)) {
           matches.push({
             line: index + 1,
             content: line.trim(),
@@ -98,10 +140,14 @@ async function searchFiles(rootDir, options = {}) {
       });
 
       if (matches.length > 0) {
+        // 计算匹配度分数
+        const score = calculateMatchScore(file.path, query, matches);
+        
         results.push({
           ...file,
           matches,
-          matchCount: matches.length
+          matchCount: matches.length,
+          score
         });
       }
     } catch (error) {
@@ -109,7 +155,31 @@ async function searchFiles(rootDir, options = {}) {
     }
   }
 
-  return results;
+  // 按匹配度排序
+  return results.sort((a, b) => b.score - a.score);
+}
+
+// 计算匹配度分数
+function calculateMatchScore(filePath, query, matches) {
+  let score = 0;
+  const normalizedQuery = query.toLowerCase().replace(/\s+/g, '');
+  const normalizedPath = filePath.toLowerCase().replace(/\s+/g, '');
+  
+  // 文件名完全匹配得分最高
+  const fileName = path.basename(filePath, '.md');
+  if (fileName.toLowerCase() === normalizedQuery) {
+    score += 100;
+  }
+  
+  // 文件名包含查询词
+  if (normalizedPath.includes(normalizedQuery)) {
+    score += 50;
+  }
+  
+  // 匹配数量
+  score += matches.length * 5;
+  
+  return score;
 }
 
 /**
