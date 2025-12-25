@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Expense } from "../types/api";
 import { getExpenseSummary } from "../lib/expenseUtils";
+import { renderCategoryList } from "./ExpenseBreakdown";
 
 interface TaggedExpenseBreakdownProps {
   expenses: Expense[];
@@ -51,24 +52,6 @@ const TaggedExpenseBreakdown: React.FC<TaggedExpenseBreakdownProps> = ({
   const taggedSummary = getExpenseSummary(taggedExpenses);
   const untaggedSummary = getExpenseSummary(untaggedExpenses);
 
-  const renderCategoryList = (
-    categories: Record<string, number>,
-    total: number,
-  ) => (
-    <div className="space-y-2 mt-2">
-      {Object.entries(categories)
-        .sort(([, a], [, b]) => b - a)
-        .map(([category, amount]) => (
-          <div key={category} className="flex justify-between text-sm">
-            <span className="truncate max-w-[60%]">{category}</span>
-            <span className="font-medium whitespace-nowrap">
-              ¥{amount.toFixed(2)} ({((amount / total) * 100).toFixed(1)}%)
-            </span>
-          </div>
-        ))}
-    </div>
-  );
-
   const commonTagSuggestions = ["预算外", "工作餐"];
 
   return (
@@ -115,15 +98,8 @@ const TaggedExpenseBreakdown: React.FC<TaggedExpenseBreakdownProps> = ({
           <h3 className="text-lg font-medium text-purple-800 mb-2">
             标签: {tag || "未选择"}
           </h3>
-          <div className="flex justify-between mb-4 text-sm">
-            <span>总笔数: {taggedSummary.count}</span>
-            <span className="font-bold">¥{taggedSummary.total.toFixed(2)}</span>
-          </div>
           {tag ? (
-            renderCategoryList(
-              taggedSummary.categories,
-              taggedSummary.total || 1,
-            )
+            renderCategoryList(taggedSummary)
           ) : (
             <p className="text-sm text-gray-500">请选择一个标签进行筛选</p>
           )}
@@ -131,17 +107,8 @@ const TaggedExpenseBreakdown: React.FC<TaggedExpenseBreakdownProps> = ({
 
         <div className="p-4 bg-gray-50 rounded-lg flex-1">
           <h3 className="text-lg font-medium text-gray-800 mb-2">其他支出</h3>
-          <div className="flex justify-between mb-4 text-sm">
-            <span>总笔数: {untaggedSummary.count}</span>
-            <span className="font-bold">
-              ¥{untaggedSummary.total.toFixed(2)}
-            </span>
-          </div>
           {tag ? (
-            renderCategoryList(
-              untaggedSummary.categories,
-              untaggedSummary.total || 1,
-            )
+            renderCategoryList(untaggedSummary)
           ) : (
             <p className="text-sm text-gray-500">请选择一个标签查看其他支出</p>
           )}

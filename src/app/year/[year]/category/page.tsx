@@ -135,17 +135,19 @@ export default function CategoryPage({
   }
 
   interface MonthlyTableRow {
-    month: number;
-    [key: string]: number;
+    month: string;
+    [key: string]: string | number;
     total: number;
   }
 
   // 准备趋势图数据
-  const allMonths = new Set<number>();
+  const allMonths = new Set<string>();
   Object.values(stats.monthlyData).forEach((data) => {
     data.forEach((item) => allMonths.add(item.month));
   });
-  const sortedMonths = Array.from(allMonths).sort((a, b) => a - b);
+  const sortedMonths = Array.from(allMonths).sort(
+    (a, b) => Number(a) - Number(b),
+  );
 
   const trendData = sortedMonths.map((month) => {
     const dataPoint: TrendDataPoint = { month: `${month}月` };
@@ -573,7 +575,8 @@ export default function CategoryPage({
                       {expense.description}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
-                      ¥{formatMoney(expense.amount)}
+                      ¥{formatMoney(expense.amount)}{" "}
+                      {expense.isRefund ? "(退款)" : ""}
                     </td>
                   </tr>
                 ))}
@@ -702,8 +705,8 @@ export default function CategoryPage({
                         key={category}
                         className="px-4 py-3 whitespace-nowrap text-sm text-gray-900"
                       >
-                        {row[category] > 0
-                          ? `¥${formatMoney(row[category])}`
+                        {Number(row[category]) > 0
+                          ? `¥${formatMoney(Number(row[category]))}`
                           : "-"}
                       </td>
                     ))}

@@ -7,6 +7,7 @@ import {
   filterExpensesByThreshold,
   getExpenseSummary,
 } from "../lib/expenseUtils";
+import { renderCategoryList } from "./ExpenseBreakdown";
 
 interface ExpenseByWeekdayProps {
   expenses: Expense[];
@@ -85,24 +86,6 @@ const ExpenseByWeekday: React.FC<ExpenseByWeekdayProps> = ({ expenses }) => {
   const selectedSummary = getExpenseSummary(selectedExpenses);
   const otherSummary = getExpenseSummary(otherExpenses);
 
-  const renderCategoryList = (
-    categories: Record<string, number>,
-    total: number,
-  ) => (
-    <div className="space-y-2">
-      {Object.entries(categories)
-        .sort(([, a], [, b]) => b - a)
-        .map(([category, amount]) => (
-          <div key={category} className="flex justify-between">
-            <span>{category}</span>
-            <span className="font-medium">
-              ¥{amount.toFixed(2)} ({((amount / total) * 100).toFixed(1)}%)
-            </span>
-          </div>
-        ))}
-    </div>
-  );
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-lg">
@@ -133,16 +116,7 @@ const ExpenseByWeekday: React.FC<ExpenseByWeekdayProps> = ({ expenses }) => {
           </h3>
           {selectedWeekdays.size > 0 && (
             <>
-              <div className="flex justify-between mb-4">
-                <span>总笔数: {selectedSummary.count}</span>
-                <span className="font-bold">
-                  ¥{selectedSummary.total.toFixed(2)}
-                </span>
-              </div>
-              {renderCategoryList(
-                selectedSummary.categories,
-                selectedSummary.total || 1,
-              )}
+              {renderCategoryList(selectedSummary)}
 
               <div className="mt-4 pt-4 border-t border-blue-100">
                 <h4 className="font-medium text-blue-700 mb-2">
@@ -179,11 +153,7 @@ const ExpenseByWeekday: React.FC<ExpenseByWeekdayProps> = ({ expenses }) => {
           <h3 className="text-lg font-medium text-green-800 mb-2">
             {selectedWeekdays.size > 0 ? "其他星期" : "所有星期"}
           </h3>
-          <div className="flex justify-between mb-4">
-            <span>总笔数: {otherSummary.count}</span>
-            <span className="font-bold">¥{otherSummary.total.toFixed(2)}</span>
-          </div>
-          {renderCategoryList(otherSummary.categories, otherSummary.total || 1)}
+          {renderCategoryList(otherSummary)}
 
           <div className="mt-4 pt-4 border-t border-green-100">
             <h4 className="font-medium text-green-700 mb-2">

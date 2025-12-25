@@ -145,7 +145,7 @@ export default function MonthPage({
     if (!stats) return [];
     if (!topExpensesLimit) return stats.expenses;
     return [...stats.expenses]
-      .sort((a, b) => b.amount - a.amount)
+      .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
       .slice(0, topExpensesLimit);
   }, [stats, topExpensesLimit]);
 
@@ -479,7 +479,8 @@ export default function MonthPage({
                         {expense.description}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
-                        ¥{formatMoney(expense.amount)}
+                        ¥{formatMoney(expense.amount)}{" "}
+                        {expense.isRefund ? "(退款)" : ""}
                       </td>
                     </tr>
                   ))}

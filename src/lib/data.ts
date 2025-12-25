@@ -2,6 +2,7 @@ import { parse } from "csv-parse/sync";
 import { readFileSync, readdirSync, existsSync } from "fs";
 import path from "path";
 import ownersData from "@/config/bill_owners.json";
+import categoryMap from "@/config/category_map.json";
 import { getDataDirectory, getYearDataDirectory } from "@/config/paths";
 import { generateSankeyData } from "./sankeyUtils";
 import {
@@ -65,7 +66,11 @@ function readAndFilterCSVFiles(dirPath: string): Transaction[] {
   // 过滤掉文件名中包含下划线的文件
   const validFiles = files.filter((file) => {
     const filename = path.basename(file, path.extname(file));
-    return file.endsWith(".csv") && !filename.includes("_");
+    return (
+      file.endsWith(".csv") &&
+      !filename.includes("_") &&
+      !(filename.includes("alipay") || filename.includes("wechat"))
+    );
   });
 
   // 读取所有有效的CSV文件
@@ -92,6 +97,35 @@ function getOwnerName(ownerId: string): string {
     console.error("Error loading owner mapping:", error);
     return ownerId; // Fallback to ID if there's an error
   }
+}
+
+function isExpense(transaction: Transaction): boolean {
+  const amount = parseFloat(transaction.金额);
+  // 分类的交易为退款的金额为正
+  const categoryName = transaction.分类 || "";
+  const categoryKeys = Object.keys(categoryMap);
+  if (categoryMap && categoryKeys.includes(categoryName)) {
+    return true;
+  }
+  return amount < 0;
+}
+
+function getCategoryStats(
+  categoryStats: Record<string, CategoryStats>,
+): Record<string, CategoryStats> {
+  return Object.entries(categoryStats)
+    .map(([category, stats]) => ({
+      ...stats,
+      category,
+      amount: Math.abs(stats.amount),
+    }))
+    .reduce(
+      (acc, stats) => {
+        acc[stats.category] = stats;
+        return acc;
+      },
+      {} as Record<string, CategoryStats>,
+    );
 }
 
 // 计算月度统计
@@ -132,16 +166,17 @@ export function calculateMonthlyStats(
       totalSalary += amount;
     }
 
-    if (amount > 0) {
+    if (!isExpense(t)) {
       income += amount;
     } else {
-      const absAmount = Math.abs(amount);
-      expense += absAmount;
+      // const absAmount = Math.abs(amount);
+      expense += amount;
 
       // Add to expenses array
       expenses.push({
         id: `${year}-${String(month).padStart(2, "0")}-${index}`,
-        amount: absAmount,
+        amount: amount,
+        isRefund: amount > 0,
         category,
         date: t["日期"],
         description: t["描述"] || t["交易对方"] || "无描述",
@@ -155,26 +190,27 @@ export function calculateMonthlyStats(
           count: 0,
         };
       }
-      categoryStats[category].amount += absAmount;
+      categoryStats[category].amount += amount;
       categoryStats[category].count += 1;
     }
   });
 
   // Generate Sankey data
   const otherIncome = Math.max(0, income - totalSalary);
+  const categoryStatsAbs = getCategoryStats(categoryStats);
   const sankeyData = generateSankeyData({
-    categoryStats,
+    categoryStats: categoryStatsAbs,
     totalIncome: income,
-    totalExpense: expense,
+    totalExpense: Math.abs(expense),
     totalSalary,
     otherIncome,
   });
 
   return {
     income,
-    expense,
-    balance: income - expense,
-    categoryStats,
+    expense: Math.abs(expense),
+    balance: income - Math.abs(expense),
+    categoryStats: categoryStatsAbs,
     totalTransactions: expenses.length,
     expenses,
     totalSalary,
@@ -235,33 +271,22 @@ export function calculateYearlyStats(
           return;
         }
       }
-      if (amount < 0) {
-        // Only include expenses (negative amounts)
+
+      const category = t["分类"];
+
+      if (!isExpense(t)) {
+        monthIncome += amount;
+      } else {
+        monthExpense += amount;
         expenses.push({
           id: `${year}-${String(month).padStart(2, "0")}-${index}`,
           amount: Math.abs(amount), // Store as positive for consistency
+          isRefund: amount > 0,
           category: t["分类"],
           date: t["日期"],
           description: t["描述"] || t["交易对方"] || "无描述",
           tags: t["标签"] || "",
         });
-      }
-      // Skip transactions that don't match the owner filter
-      if (ownerId && ownerId !== "all") {
-        const ownerName = getOwnerName(ownerId);
-        // Check both owner fields for backward compatibility
-        if (t.owner !== ownerName && t["账单人"] !== ownerName) {
-          return;
-        }
-      }
-
-      const category = t["分类"];
-
-      if (amount > 0) {
-        monthIncome += amount;
-      } else {
-        monthExpense += Math.abs(amount);
-
         // 聚合分类统计
         if (!categoryStats[category]) {
           categoryStats[category] = {
@@ -269,11 +294,11 @@ export function calculateYearlyStats(
             count: 0,
           };
         }
-        categoryStats[category].amount += Math.abs(amount);
+        categoryStats[category].amount += amount;
         categoryStats[category].count += 1;
       }
       if (category === "工资") {
-        monthSalary += Math.abs(amount);
+        monthSalary += amount;
       }
     });
 
@@ -284,25 +309,27 @@ export function calculateYearlyStats(
     monthlyData.push({
       month,
       income: monthIncome,
-      expense: monthExpense,
-      balance: monthIncome - monthExpense,
+      expense: Math.abs(monthExpense),
+      balance: monthIncome - Math.abs(monthExpense),
       salary: monthSalary,
     });
   }
 
+  const categoryStatsAbs = getCategoryStats(categoryStats);
+
   const sankeyData = generateSankeyData({
-    categoryStats,
+    categoryStats: categoryStatsAbs,
     totalIncome,
-    totalExpense,
+    totalExpense: Math.abs(totalExpense),
     totalSalary,
     otherIncome: Math.max(0, totalIncome - totalSalary),
   });
 
   return {
     totalIncome,
-    totalExpense,
-    totalBalance: totalIncome - totalExpense,
-    categoryStats,
+    totalExpense: Math.abs(totalExpense),
+    totalBalance: totalIncome - Math.abs(totalExpense),
+    categoryStats: categoryStatsAbs,
     monthlyData,
     expenses,
     totalSalary,
@@ -447,123 +474,98 @@ export function calculateCategoryYearlyStats(
     throw new Error(`数据目录不存在: ${dataDir}`);
   }
 
-  const files = readdirSync(dataDir);
-  const csvFiles = files
-    .filter((f) => {
-      return !(f.includes("alipay") || f.includes("wechat"));
-    })
-    .filter((f) => f.endsWith(".csv"))
-    .sort();
-
   const monthlyData: Record<string, CategoryMonthlyData[]> = {};
   const totalByCategory: Record<string, CategoryStats> = {};
   let totalExpense = 0;
   const categoriesSet = new Set<string>();
-
-  for (const file of csvFiles) {
-    const month = parseInt(file.replace(".csv", ""));
-    const filePath = path.join(dataDir, file);
-    const transactions = readCSV(filePath);
-
-    transactions.forEach((t) => {
-      // Skip transactions that don't match the owner filter
-      if (ownerId) {
-        const ownerName = getOwnerName(ownerId);
-        // Check both owner fields for backward compatibility
-        if (t.owner !== ownerName && t["账单人"] !== ownerName) {
-          return;
-        }
-      }
-      if (filterUnexpected) {
-        if (t["标签"]?.includes("预算外")) {
-          return;
-        }
-      }
-
-      const amount = parseFloat(t["金额"]);
-      const category = t["分类"];
-
-      // 只统计支出
-      if (amount < 0) {
-        const absAmount = Math.abs(amount);
-        totalExpense += absAmount;
-        categoriesSet.add(category);
-
-        // 初始化分类的月度数据数组
-        if (!monthlyData[category]) {
-          monthlyData[category] = [];
-        }
-
-        // 查找或创建该月的数据
-        let monthData = monthlyData[category].find((m) => m.month === month);
-        if (!monthData) {
-          monthData = { month, amount: 0, count: 0 };
-          monthlyData[category].push(monthData);
-        }
-        monthData.amount += absAmount;
-        monthData.count += 1;
-
-        // 更新总计
-        if (!totalByCategory[category]) {
-          totalByCategory[category] = { amount: 0, count: 0 };
-        }
-        totalByCategory[category].amount += absAmount;
-        totalByCategory[category].count += 1;
-      }
-    });
-  }
-
-  // 对每个分类的月度数据按月份排序
-  Object.keys(monthlyData).forEach((category) => {
-    monthlyData[category].sort((a, b) => a.month - b.month);
-  });
-
-  const categories = Array.from(categoriesSet).sort((a, b) => {
-    return totalByCategory[b].amount - totalByCategory[a].amount;
-  });
-
   // 获取所有支出记录并按金额降序排序
   const allExpenses: TopExpense[] = [];
 
   // 使用新的函数读取并过滤CSV文件
   const transactions = readAndFilterCSVFiles(dataDir);
 
-  for (const tx of transactions) {
+  for (const t of transactions) {
     // Skip transactions that don't match the owner filter
     if (ownerId) {
       const ownerName = getOwnerName(ownerId);
-      if (tx.owner !== ownerName && tx["账单人"] !== ownerName) {
+      if (t.owner !== ownerName && t["账单人"] !== ownerName) {
         continue;
       }
     }
     if (filterUnexpected) {
-      if (tx["标签"]?.includes("预算外")) {
+      if (t["标签"]?.includes("预算外")) {
         continue;
       }
     }
-    const amount = parseFloat(tx.金额);
-    if (amount < 0) {
+    const amount = parseFloat(t["金额"]);
+    const category = t["分类"];
+    if (isExpense(t)) {
       // 只处理支出
       allExpenses.push({
-        date: tx.日期,
-        category: tx.分类,
+        date: t.日期,
+        category: t.分类,
         amount: Math.abs(amount),
-        description: tx.描述 || tx.交易对方 || "",
+        isRefund: amount > 0,
+        description: t.描述 || t.交易对方 || "",
       });
+
+      const month = (new Date(t.日期).getMonth() + 1)
+        .toString()
+        .padStart(2, "0");
+      totalExpense += amount;
+      categoriesSet.add(category);
+
+      // 初始化分类的月度数据数组
+      if (!monthlyData[category]) {
+        monthlyData[category] = [];
+      }
+
+      // 查找或创建该月的数据
+      let monthData = monthlyData[category].find((m) => m.month === month);
+      if (!monthData) {
+        monthData = { month, amount: 0, count: 0, isRefund: false };
+        monthlyData[category].push(monthData);
+      }
+      monthData.amount += amount;
+      monthData.count += 1;
+      monthData.isRefund = amount > 0;
+
+      // 更新总计
+      if (!totalByCategory[category]) {
+        totalByCategory[category] = { amount: 0, count: 0 };
+      }
+      totalByCategory[category].amount += amount;
+      totalByCategory[category].count += 1;
     }
   }
 
+  // 对每个分类的月度数据按月份排序
+  Object.keys(monthlyData).forEach((category) => {
+    monthlyData[category].sort((a, b) => parseInt(a.month) - parseInt(b.month));
+    monthlyData[category].forEach((m) => {
+      m.amount = Math.abs(m.amount);
+    });
+  });
+
+  const totalByCategoryAbs = getCategoryStats(totalByCategory);
+
+  const categories = Array.from(categoriesSet).sort((a, b) => {
+    return totalByCategoryAbs[b].amount - totalByCategoryAbs[a].amount;
+  });
+
   // 按金额降序排序并取前20
   const topExpenses = allExpenses
-    .sort((a: TopExpense, b: TopExpense) => b.amount - a.amount)
+    .sort(
+      (a: TopExpense, b: TopExpense) => Math.abs(b.amount) - Math.abs(a.amount),
+    )
     .slice(0, 100);
 
   // 返回结果
   return {
     categories: Array.from(categories),
     monthlyData: monthlyData,
-    totalByCategory: totalByCategory,
-    totalExpense: totalExpense,
+    totalByCategory: totalByCategoryAbs,
+    totalExpense: Math.abs(totalExpense),
     topExpenses: topExpenses,
   };
 }

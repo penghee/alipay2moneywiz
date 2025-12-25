@@ -122,12 +122,7 @@ export default function YearSummaryCards({
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600">
-              总收入
-              <span className="text-xs text-gray-400 cursor-help">
-                (含退款)
-              </span>
-            </p>
+            <p className="text-sm font-medium text-gray-600">总收入</p>
             <p className="text-2xl font-bold text-green-600">
               ¥{formatMoney(stats.totalIncome)}
             </p>

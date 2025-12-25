@@ -96,12 +96,14 @@ export interface Expense {
   description: string;
   tags: string;
   remark?: string;
+  isRefund?: boolean;
 }
 
 export interface CategoryMonthlyData {
-  month: number;
+  month: string;
   amount: number;
   count: number;
+  isRefund: boolean;
 }
 
 export interface TopExpense {
@@ -109,6 +111,7 @@ export interface TopExpense {
   category: string;
   amount: number;
   description: string;
+  isRefund?: boolean;
 }
 
 export interface CategoryYearlyStats {
