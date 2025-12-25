@@ -31,7 +31,6 @@ export const renderCategoryList = (
         {Object.entries(categories)
           .sort(([, a], [, b]) => b - a)
           .map(([category, amount]) => {
-            console.log(category, amount);
             const refundAmount = refundCategories[category] || 0;
             return (
               <div key={category} className="flex justify-between">

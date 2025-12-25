@@ -46,7 +46,7 @@ export interface YearlyStats {
   totalIncome: number;
   totalExpense: number;
   totalBalance: number;
-  categoryStats?: Record<string, { amount: number; count: number }>;
+  categoryStats?: Record<string, CategoryStats>;
   monthlyData: Array<{
     month: number;
     income: number;
@@ -72,6 +72,7 @@ export interface MonthlyCategoryStats {
 export interface CategoryStats {
   amount: number;
   count: number;
+  expenses: Expense[];
 }
 
 export interface MonthlyStats {
@@ -97,6 +98,7 @@ export interface Expense {
   tags: string;
   remark?: string;
   isRefund?: boolean;
+  owner?: string;
 }
 
 export interface CategoryMonthlyData {

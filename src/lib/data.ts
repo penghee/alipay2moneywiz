@@ -173,7 +173,7 @@ export function calculateMonthlyStats(
       expense += amount;
 
       // Add to expenses array
-      expenses.push({
+      const expenseItem = {
         id: `${year}-${String(month).padStart(2, "0")}-${index}`,
         amount: amount,
         isRefund: amount > 0,
@@ -181,17 +181,22 @@ export function calculateMonthlyStats(
         date: t["日期"],
         description: t["描述"] || t["交易对方"] || "无描述",
         tags: t["标签"] || "",
-      });
+        owner: t["账单人"] || "",
+        remark: t["备注"] || "",
+      };
+      expenses.push(expenseItem);
 
       // Update category stats
       if (!categoryStats[category]) {
         categoryStats[category] = {
           amount: 0,
           count: 0,
+          expenses: [],
         };
       }
       categoryStats[category].amount += amount;
       categoryStats[category].count += 1;
+      categoryStats[category].expenses.push(expenseItem);
     }
   });
 
@@ -278,24 +283,29 @@ export function calculateYearlyStats(
         monthIncome += amount;
       } else {
         monthExpense += amount;
-        expenses.push({
+        const expense = {
           id: `${year}-${String(month).padStart(2, "0")}-${index}`,
-          amount: Math.abs(amount), // Store as positive for consistency
+          amount: amount, // Store as positive for consistency
           isRefund: amount > 0,
           category: t["分类"],
           date: t["日期"],
           description: t["描述"] || t["交易对方"] || "无描述",
           tags: t["标签"] || "",
-        });
+          owner: t["账单人"] || "",
+          remark: t["备注"] || "",
+        };
+        expenses.push(expense);
         // 聚合分类统计
         if (!categoryStats[category]) {
           categoryStats[category] = {
             amount: 0,
             count: 0,
+            expenses: [],
           };
         }
         categoryStats[category].amount += amount;
         categoryStats[category].count += 1;
+        categoryStats[category].expenses.push(expense);
       }
       if (category === "工资") {
         monthSalary += amount;
@@ -532,10 +542,21 @@ export function calculateCategoryYearlyStats(
 
       // 更新总计
       if (!totalByCategory[category]) {
-        totalByCategory[category] = { amount: 0, count: 0 };
+        totalByCategory[category] = { amount: 0, count: 0, expenses: [] };
       }
       totalByCategory[category].amount += amount;
       totalByCategory[category].count += 1;
+      totalByCategory[category].expenses.push({
+        id: `${year}-${String(month).padStart(2, "0")}-${category}-${totalByCategory[category].expenses.length}`,
+        amount: amount,
+        isRefund: amount > 0,
+        category,
+        date: t["日期"],
+        description: t["描述"] || t["交易对方"] || "无描述",
+        tags: t["标签"] || "",
+        owner: t["账单人"] || "",
+        remark: t["备注"] || "",
+      });
     }
   }
 

@@ -31,9 +31,12 @@ import dynamic from "next/dynamic";
 import ExpenseByWeekday from "@/components/ExpenseByWeekday";
 import ExpenseBreakdown from "@/components/ExpenseBreakdown";
 import TagBreakdown from "@/components/TaggedExpenseBreakdown";
-import { MonthlyStats } from "@/types/api";
+import { Expense, MonthlyStats } from "@/types/api";
 import { formatMoney } from "@/lib/utils";
 import SankeyChart from "@/components/charts/SankeyChart";
+import PreviewDialog from "@/components/ui/Dialog";
+import ExpensePreview from "@/components/ExpensesPreview";
+
 // Dynamically import client-side components
 const ThresholdSlider = dynamic(() => import("@/components/ThresholdSlider"), {
   ssr: false,
@@ -61,7 +64,8 @@ export default function MonthPage({
     Record<string, CategoryStats>
   >({});
   const [selectedOwner, setSelectedOwner] = useState<string>("all");
-
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewExpenses, setPreviewExpenses] = useState<Expense[]>([]);
   const router = useRouter();
 
   const owners = useMemo(
@@ -575,6 +579,9 @@ export default function MonthPage({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     同比去年
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -634,6 +641,21 @@ export default function MonthPage({
                         "N/A"
                       )}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => {
+                          setPreviewExpenses(
+                            stats.expenses.filter(
+                              (expense) => expense.category === item.name,
+                            ),
+                          );
+                          setOpenPreview(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        查看
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -641,6 +663,13 @@ export default function MonthPage({
           </div>
         </div>
       </div>
+      <PreviewDialog
+        open={openPreview}
+        onOpenChange={setOpenPreview}
+        title="交易预览"
+      >
+        <ExpensePreview expenses={previewExpenses} />
+      </PreviewDialog>
     </div>
   );
 }

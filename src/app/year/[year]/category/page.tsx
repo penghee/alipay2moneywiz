@@ -25,8 +25,11 @@ import {
   Bar,
 } from "recharts";
 import { formatDate } from "date-fns";
-import { CategoryYearlyStats } from "@/types/api";
+import { CategoryYearlyStats, Expense } from "@/types/api";
 import { formatMoney } from "@/lib/utils";
+import PreviewDialog from "@/components/ui/Dialog";
+import ExpensePreview from "@/components/ExpensesPreview";
+
 // 固定分类
 const FIXED_CATEGORIES = ["住房", "交通", "医疗"];
 
@@ -43,6 +46,8 @@ export default function CategoryPage({
   );
   const [topExpensesLimit, setTopExpensesLimit] = useState<number>(20);
   const [selectedOwner, setSelectedOwner] = useState<string>("all");
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewExpenses, setPreviewExpenses] = useState<Expense[]>([]);
   const [selectedFilterUnexpected, setSelectedFilterUnexpected] =
     useState<string>("all");
   const router = useRouter();
@@ -611,6 +616,9 @@ export default function CategoryPage({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     月均
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -650,6 +658,17 @@ export default function CategoryPage({
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         ¥{formatMoney(avgPerMonth)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <button
+                          onClick={() => {
+                            setPreviewExpenses(categoryData.expenses);
+                            setOpenPreview(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          查看
+                        </button>
                       </td>
                     </tr>
                   );
@@ -735,6 +754,13 @@ export default function CategoryPage({
             </table>
           </div>
         </div>
+        <PreviewDialog
+          open={openPreview}
+          onOpenChange={setOpenPreview}
+          title="交易预览"
+        >
+          <ExpensePreview expenses={previewExpenses} />
+        </PreviewDialog>
       </div>
     </div>
   );

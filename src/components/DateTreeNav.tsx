@@ -113,6 +113,17 @@ export default function DateTreeNav() {
               >
                 全年流水
               </Link>
+              {/* 全年分类 */}
+              <Link
+                href={`/year/${year}/category`}
+                className={`block px-4 py-1 hover:bg-gray-700 rounded-md ${
+                  pathname === `/${year}/category`
+                    ? "text-blue-400"
+                    : "text-gray-400"
+                }`}
+              >
+                全年分类
+              </Link>
               {/* 全年预算 */}
               <Link
                 href={`/year/${year}/budget`}

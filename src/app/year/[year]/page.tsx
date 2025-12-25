@@ -18,6 +18,9 @@ import ExpenseBreakdown from "@/components/ExpenseBreakdown";
 import TagBreakdown from "@/components/TaggedExpenseBreakdown";
 import ExpenseByWeekday from "@/components/ExpenseByWeekday";
 import { formatMoney } from "@/lib/utils";
+import { Expense } from "@/types/api";
+import PreviewDialog from "@/components/ui/Dialog";
+import ExpensePreview from "@/components/ExpensesPreview";
 
 const NAME_MAP: Record<string, string> = {
   income: "收入",
@@ -60,6 +63,8 @@ export default function YearPage({
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState<number | null>(null);
   const [selectedOwner, setSelectedOwner] = useState<string>("all");
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewExpenses, setPreviewExpenses] = useState<Expense[]>([]);
   const router = useRouter();
 
   const owners = useMemo(
@@ -124,6 +129,7 @@ export default function YearPage({
         count: data.count,
         percentage:
           Math.round((data.amount / (stats.totalExpense || 0)) * 100) || 0,
+        expenses: data.expenses,
       }))
       .sort((a, b) => b.average - a.average);
   }, [stats]);
@@ -436,6 +442,9 @@ export default function YearPage({
                   >
                     交易笔数
                   </th>
+                  <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -457,6 +466,17 @@ export default function YearPage({
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-500">
                       {item.count} 笔
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-500">
+                      <button
+                        onClick={() => {
+                          setPreviewExpenses(item.expenses);
+                          setOpenPreview(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        查看
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -568,6 +588,13 @@ export default function YearPage({
           </div>
         </div>
       </div>
+      <PreviewDialog
+        open={openPreview}
+        onOpenChange={setOpenPreview}
+        title="交易预览"
+      >
+        <ExpensePreview expenses={previewExpenses} />
+      </PreviewDialog>
     </div>
   );
 }
