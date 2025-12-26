@@ -19,7 +19,7 @@ export const COLOR_PALETTE = [
 
   "#60a5fa", // blue-400
   "#34d399", // emerald-400
-  "a78bfa", // violet-400
+  "#a78bfa", // violet-400
   "#f87171", // red-400
   "#fbbf24", // amber-400
   "#22d3ee", // cyan-400
@@ -28,18 +28,12 @@ export const COLOR_PALETTE = [
 
   "#93c5fd", // blue-300
   "#6ee7b7", // emerald-300
-  "#c4b5fd", // violet-300
   "#fca5a5", // red-300
   "#fbbf24", // amber-300
   "#fcd34d", // amber-200
   "#67e8f9", // cyan-300
   "#f9a8d4", // pink-300
   "#fdba74", // orange-300
-
-  // 灰色系
-  "#94a3b8", // slate-400
-  "#cbd5e1", // slate-300
-  "#e2e8f0", // slate-200
 ];
 
 // 存储已分配的颜色
