@@ -168,7 +168,13 @@ export default function YearSummaryCards({
             <p className="text-xs text-gray-500 mt-1">
               {/* 结余比率 */}
               结余比率{" "}
-              {((stats.totalBalance / stats.totalIncome) * 100).toFixed(2)}%
+              {stats.totalIncome > 0 ? (
+                <>
+                  {((stats.totalBalance / stats.totalIncome) * 100).toFixed(2)}%
+                </>
+              ) : (
+                "N/A"
+              )}
             </p>
             {stats.totalIncome > 0 && (
               <div className="mt-2">
@@ -242,25 +248,31 @@ export default function YearSummaryCards({
                       </div>
                     </div>
                   </div>
-                  <p
-                    className={`text-sm font-medium ${
-                      liquidityRatio < 3
-                        ? "text-red-600"
-                        : liquidityRatio <= 6
-                          ? "text-yellow-600"
-                          : "text-green-600"
-                    }`}
-                  >
-                    {liquidityRatio.toFixed(1)} 个月(¥
-                    {formatMoney(cashAssets)})
-                    <span className="text-xs ml-1 text-gray-500">
-                      {liquidityRatio < 3
-                        ? " (需增加应急储备)"
-                        : liquidityRatio <= 6
-                          ? " (健康)"
-                          : " (充足)"}
-                    </span>
-                  </p>
+                  {stats.totalIncome > 0 ? (
+                    <>
+                      <p
+                        className={`text-sm font-medium ${
+                          liquidityRatio < 3
+                            ? "text-red-600"
+                            : liquidityRatio <= 6
+                              ? "text-yellow-600"
+                              : "text-green-600"
+                        }`}
+                      >
+                        {liquidityRatio.toFixed(1)} 个月(¥
+                        {formatMoney(cashAssets)})
+                        <span className="text-xs ml-1 text-gray-500">
+                          {liquidityRatio < 3
+                            ? " (需增加应急储备)"
+                            : liquidityRatio <= 6
+                              ? " (健康)"
+                              : " (充足)"}
+                        </span>
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm font-medium text-gray-600">N/A</p>
+                  )}
                 </div>
               )}
             </div>

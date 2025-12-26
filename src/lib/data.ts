@@ -315,7 +315,6 @@ export function calculateYearlyStats(
     totalIncome += monthIncome;
     totalExpense += monthExpense;
     totalSalary += monthSalary;
-
     monthlyData.push({
       month,
       income: monthIncome,

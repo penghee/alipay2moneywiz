@@ -69,7 +69,7 @@ export function mapCategory(
       }
     }
   }
-  return "其他";
+  return "百货";
 }
 
 // 处理支付宝账单
@@ -125,6 +125,15 @@ export async function processAlipay(
     if (transaction["描述"].includes("亲情卡")) {
       continue;
     }
+    // 跳过交易关闭
+    if (transaction["交易状态"] === "交易关闭") {
+      continue;
+    }
+    // 跳过不计收支
+    if (record["收/支"] === "不计收支") {
+      continue;
+    }
+
     if (record["收/支"] === "收入" || record["收/支"] === "支出") {
       transaction["交易对方"] = "";
       transaction["分类"] = mapCategory(

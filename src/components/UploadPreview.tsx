@@ -207,7 +207,7 @@ export default function UploadPreview({
                       : "text-green-600",
                   )}
                 >
-                  {Number(expense["金额"]) >= 0 ? "-" : ""}¥
+                  {Number(expense["金额"]) >= 0 ? "+" : ""}¥
                   {formatMoney(Math.abs(Number(expense["金额"])))}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
