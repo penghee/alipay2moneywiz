@@ -10,6 +10,7 @@ import * as fsp from "fs/promises";
 import * as fs from "fs";
 import readline from "readline";
 export const dynamic = "force-dynamic"; // Prevent static generation
+import platformMap from "@/config/platform.json";
 
 // 读取映射文件
 export function loadMaps() {
@@ -69,7 +70,7 @@ export function mapCategory(
       }
     }
   }
-  return "百货";
+  return "其他";
 }
 
 // 处理支付宝账单
@@ -336,59 +337,10 @@ export function saveData(
       账单人: transactionOwner,
       // 确保owner字段也设置，用于后端的兼容性
       owner: transactionOwner,
+      平台: platformMap[platform as keyof typeof platformMap] || platform,
     };
   });
   const filepath = path.join(yearDir, filename);
-
-  // 检查文件是否存在并读取现有数据
-  // let existingData: Record<string, string>[] = [];
-  // try {
-  //   const content = readFileSync(filepath, "utf8");
-  //   if (content.trim()) {
-  //     const parsedData = parse(content, {
-  //       columns: true,
-  //       skip_empty_lines: true,
-  //     }) as Record<string, string>[];
-
-  //     // Convert to the correct type and ensure all records have the bill owner field
-  //     existingData = parsedData.map((record) => ({
-  //       ...record,
-  //       账单人: record["账单人"] || owner,
-  //     }));
-
-  //     // 确保现有数据有账单人字段
-  //     existingData = existingData.map((record) => ({
-  //       ...record,
-  //       账单人: record["账单人"] || owner,
-  //     }));
-  //   }
-  // } catch (error) {
-  //   // 文件不存在或其他错误，继续使用空数组
-  //   if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-  //     console.error("Error reading existing data:", error);
-  //   }
-  // }
-
-  // 合并现有数据和新数据
-  // const allData = [...existingData, ...transactions];
-
-  // // 保存数据
-  // const output = stringify(allData, {
-  //   header: true,
-  //   columns: [
-  //     "账户",
-  //     "转账",
-  //     "描述",
-  //     "交易对方",
-  //     "分类",
-  //     "日期",
-  //     "备注",
-  //     "标签",
-  //     "金额",
-  //     "账单人",
-  //   ],
-  // });
-  // writeFileSync(filepath, output);
 
   // 合并到月份文件
   const monthPath = path.join(yearDir, `${monthStr}.csv`);
@@ -415,6 +367,7 @@ export function saveData(
         "标签",
         "金额",
         "账单人",
+        "平台",
       ],
     });
     writeFileSync(monthPath, mergedOutput);
@@ -436,6 +389,7 @@ export function saveData(
             "标签",
             "金额",
             "账单人",
+            "平台",
           ],
         }),
       );
