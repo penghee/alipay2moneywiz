@@ -11,7 +11,7 @@ import {
   FileText,
   Calendar,
   Eye,
-  Save,
+  Brain,
   Loader2,
 } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
@@ -48,6 +48,7 @@ export default function ImportPage() {
   const [previewData, setPreviewData] = useState<PreviewUploadResponse | null>(
     null,
   );
+  const [smartCategory, setSmartCategory] = useState(true);
   const [editableTransactions, setEditableTransactions] = useState<
     TransactionPreview[]
   >([]);
@@ -96,6 +97,7 @@ export default function ImportPage() {
       formData.append("file", file);
       formData.append("platform", platform);
       formData.append("owner", owner);
+      formData.append("smartCategory", smartCategory.toString());
 
       if (previewMode) {
         // In preview mode, get the preview data first
@@ -268,7 +270,7 @@ export default function ImportPage() {
 
         {/* Preview Toggle */}
         <div className="mb-6 bg-white p-4 rounded-lg shadow">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 mb-4">
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -285,6 +287,25 @@ export default function ImportPage() {
             <span className="text-sm text-gray-500">
               {previewMode ? "上传前预览并编辑交易记录" : "直接上传交易记录"}
             </span>
+          </div>
+          {/* 启用智能分类 */}
+          <div className="flex items-center space-x-2">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={smartCategory}
+                onChange={(e) => setSmartCategory(e.target.checked)}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+            <label
+              htmlFor="smart-category"
+              className="flex items-center text-sm"
+            >
+              <Brain className="h-4 w-4 mr-1" />
+              启用智能分类
+            </label>
           </div>
         </div>
 

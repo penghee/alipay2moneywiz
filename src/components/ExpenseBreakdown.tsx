@@ -24,7 +24,7 @@ export const renderCategoryList = (
       <div className="flex justify-between mb-4">
         <span>总笔数: {data.count}</span>
         <span className="font-bold">
-          ¥{data.total.toFixed(2)} (-退款: {data.refund.toFixed(2)})
+          ¥{data.total.toFixed(2)} (包含退款: {data.refund.toFixed(2)})
         </span>
       </div>
       <div className="space-y-2">

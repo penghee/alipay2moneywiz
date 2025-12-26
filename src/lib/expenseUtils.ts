@@ -14,7 +14,7 @@ export function filterExpensesByThreshold(
 export function getExpenseSummary(expenses: Expense[]) {
   return expenses.reduce(
     (acc, expense) => {
-      const amount = Math.abs(expense.amount);
+      const amount = expense.amount;
       acc.total += amount;
       acc.count += 1;
       if (expense.isRefund) {

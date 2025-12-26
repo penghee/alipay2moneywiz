@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File;
     const platform = formData.get("platform") as string;
     const owner = (formData.get("owner") as string) || "爸爸";
+    const smartCategory = formData.get("smartCategory") === "true";
 
     console.log("Upload request received:", {
       fileName: file.name,
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
         accountMap,
         categoryMap,
         owner,
+        smartCategory,
       );
       transactions = [...transactions, ...alipayTransactions];
     } else if (platform === "wechat") {
@@ -52,11 +54,12 @@ export async function POST(request: NextRequest) {
       console.log("Processing Wechat XLSX file...");
       const buffer = Buffer.from(await file.arrayBuffer());
       console.log("File buffer length:", buffer.length);
-      const { transactions: wechatTransactions } = processWechat(
+      const { transactions: wechatTransactions } = await processWechat(
         buffer,
         accountMap,
         categoryMap,
         owner,
+        smartCategory,
       );
       transactions = [...transactions, ...wechatTransactions];
     }
