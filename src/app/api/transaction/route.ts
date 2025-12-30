@@ -5,7 +5,7 @@ import { writeFile, readFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { getDataDirectory } from "@/config/paths";
 import billOwners from "@/config/bill_owners.json";
-
+import { parseDate } from "@/lib/utils";
 // 确保目录存在
 async function ensureDirectoryExists(directory: string) {
   if (!existsSync(directory)) {
@@ -57,6 +57,7 @@ export async function POST(request: Request) {
       "标签",
       "金额",
       "账单人",
+      "来源",
     ];
 
     if (!fileExists) {
@@ -70,11 +71,12 @@ export async function POST(request: Request) {
       `${transaction.description}`,
       `${transaction.counterparty || ""}`,
       `${transaction.category}`,
-      `${transaction.date}`,
+      `${parseDate(transaction.date)}`,
       `${transaction.note || ""}`,
       `${transaction.tags || ""}`,
       transaction.amount,
       `${transaction.owner || ""}`,
+      `${transaction.source || ""}`,
     ];
 
     // 添加到CSV内容

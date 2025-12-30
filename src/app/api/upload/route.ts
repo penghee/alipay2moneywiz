@@ -12,6 +12,7 @@ import readline from "readline";
 export const dynamic = "force-dynamic"; // Prevent static generation
 import platformMap from "@/config/platform.json";
 import { smartCategoryMatcher } from "@/lib/smartCategory";
+import { parseDate } from "@/lib/utils";
 
 // 读取映射文件
 export function loadMaps() {
@@ -25,31 +26,6 @@ export function loadMaps() {
   return { accountMap, categoryMap };
 }
 
-// 解析日期
-export function parseDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-// 映射账户
-export function mapAccount(
-  recordStr: string,
-  accountMap: Record<string, string>,
-): string {
-  if (!recordStr || typeof recordStr !== "string") {
-    return "未知账户";
-  }
-  for (const key in accountMap) {
-    if (recordStr.includes(key)) {
-      return accountMap[key];
-    }
-  }
-  return "未知账户";
-}
-
 // 映射分类
 export async function mapCategory(
   transactionType: string,
@@ -57,16 +33,31 @@ export async function mapCategory(
   counterparty: string,
   amount: number,
   categoryMap: Record<string, string[]>,
-  smartCategory: boolean,
+  smartCategory: boolean = false,
 ): Promise<string> {
-  return await smartCategoryMatcher.smartMatchCategory(
-    transactionType,
-    product,
-    counterparty,
-    amount,
-    categoryMap,
-    smartCategory,
-  );
+  const safeTransactionType = transactionType || "";
+  const safeProduct = product || "";
+  const safeCounterparty = counterparty || "";
+  const searchText =
+    `${safeTransactionType} ${safeProduct} ${safeCounterparty}`.toLowerCase();
+
+  for (const category in categoryMap) {
+    const keywords = categoryMap[category];
+    for (const keyword of keywords) {
+      if (searchText.includes(keyword.toLowerCase())) {
+        return category;
+      }
+    }
+  }
+  return safeTransactionType || "其他";
+  // return await smartCategoryMatcher.smartMatchCategory(
+  //   transactionType,
+  //   product,
+  //   counterparty,
+  //   amount,
+  //   categoryMap,
+  //   smartCategory,
+  // );
 }
 
 // 处理支付宝账单
@@ -83,7 +74,7 @@ export async function processAlipay(
   const arrayBuffer = await content.arrayBuffer();
   // Convert ArrayBuffer to Buffer
   const buffer = Buffer.from(arrayBuffer);
-  const str = iconv.decode(buffer, "GBK");
+  const str = iconv.decode(buffer, "utf-8");
   await fsp.writeFile("temp_res", str);
   // read line by line
   const fileStream = fs.createReadStream("temp_res");
@@ -112,66 +103,52 @@ export async function processAlipay(
     relax_column_count: true,
     skip_empty_lines: true,
   }) as Record<string, string>[];
-
   const transactions: Record<string, string>[] = [];
   for (const record of records) {
     const transaction: Record<string, string> = {};
-    transaction["日期"] = parseDate(record["交易时间"] || "");
-    transaction["描述"] = record["商品说明"] || "";
-    transaction["账户"] = mapAccount(record["收/付款方式"] || "", accountMap);
-    // 过滤描述包含亲情卡的记录
-    if (transaction["描述"].includes("亲情卡")) {
+    if (record["交易时间"] === "") {
       continue;
     }
-    // 跳过交易关闭
-    if (transaction["交易状态"] === "交易关闭") {
-      continue;
-    }
-    // 跳过不计收支
-    if (record["收/支"] === "不计收支") {
+    if (
+      transaction["描述"].includes("亲情卡") ||
+      transaction["描述"].includes("亲属卡")
+    ) {
       continue;
     }
 
-    if (record["收/支"] === "收入" || record["收/支"] === "支出") {
-      transaction["交易对方"] = "";
-      const amount = parseFloat(record["金额"] || "0");
-      transaction["分类"] = await mapCategory(
-        record["交易分类"] || "",
-        record["商品说明"] || "",
-        record["交易对方"] || "",
-        amount,
-        categoryMap,
-        smartCategory,
-      );
-      transaction["转账"] = "";
-      if (record["收/支"] === "支出") {
-        const fee = -Math.abs(amount);
-        transaction["金额"] = fee.toString();
-      } else if (record["收/支"] === "收入") {
-        transaction["金额"] = record["金额"] || "0";
-      }
+    transaction["日期"] = parseDate(record["交易时间"] || "");
+    transaction["描述"] = record["商品说明"] || "";
+    transaction["账户"] = (record["收/付款方式"] || "/").split("(")[0];
+    // 过滤描述包含亲情卡的记录
+    if (
+      transaction["描述"].includes("亲情卡") ||
+      transaction["描述"].includes("亲属卡")
+    ) {
+      continue;
+    }
+
+    transaction["交易对方"] = record["交易对方"] || "";
+    const amount = parseFloat(record["金额"] || "0");
+    transaction["分类"] = await mapCategory(
+      record["交易分类"] || "",
+      record["商品说明"] || "",
+      record["交易对方"] || "",
+      amount,
+      categoryMap,
+      smartCategory,
+    );
+    transaction["转账"] = "";
+    if (record["收/支"] === "支出") {
+      const fee = -Math.abs(amount);
+      transaction["金额"] = fee.toString();
     } else {
-      transaction["交易对方"] = "";
-      const amount = parseFloat(record["金额"] || "0");
-      transaction["分类"] = await mapCategory(
-        record["交易分类"] || "",
-        record["商品说明"] || "",
-        record["交易对方"] || "",
-        amount,
-        categoryMap,
-        smartCategory,
-      );
-      transaction["转账"] = mapAccount(record["交易对方"] || "", accountMap);
-      if ((record["商品说明"] || "").includes("还款")) {
-        const fee = -Math.abs(amount);
-        transaction["金额"] = fee.toString();
-      } else {
-        transaction["金额"] = record["金额"] || "0";
-      }
+      // 退款， 收入 统一为正
+      transaction["金额"] = Math.abs(amount).toString() || "0";
     }
     transaction["标签"] = "";
-    transaction["备注"] = "";
+    transaction["备注"] = record["备注"] || "";
     transaction["账单人"] = owner;
+    transaction["来源"] = "支付宝";
     transactions.push(transaction);
   }
   return { transactions };
@@ -223,50 +200,42 @@ export async function processWechat(
 
   const transactions: Record<string, string>[] = [];
   for (const record of records) {
+    if (record["交易时间"] === "") {
+      continue;
+    }
     const transaction: Record<string, string> = {};
     transaction["日期"] = parseDate(record["交易时间"] || "");
     transaction["描述"] = record["商品"] || "";
-    transaction["账户"] = mapAccount(record["支付方式"] || "", accountMap);
+    transaction["账户"] = (record["支付方式"] || "/").split("(")[0];
     // 过滤描述包含亲情卡的记录
-    if (transaction["描述"].includes("亲情卡")) {
+    if (
+      transaction["描述"].includes("亲情卡") ||
+      transaction["描述"].includes("亲属卡")
+    ) {
       continue;
     }
 
-    if (record["收/支"] === "收入" || record["收/支"] === "支出") {
-      transaction["交易对方"] = "";
-      const amount = parseFloat((record["金额(元)"] || "0").replace("¥", ""));
-      transaction["分类"] = await mapCategory(
-        record["交易类型"] || "",
-        record["商品"] || "",
-        record["交易对方"] || "",
-        amount,
-        categoryMap,
-        smartCategory,
-      );
-      transaction["转账"] = "";
-      if (record["收/支"] === "支出") {
-        const fee = -Math.abs(amount);
-        transaction["金额"] = fee.toString();
-      } else if (record["收/支"] === "收入") {
-        transaction["金额"] = (record["金额(元)"] || "0").replace("¥", "");
-      }
+    transaction["交易对方"] = record["交易对方"] || "";
+    const amount = parseFloat((record["金额(元)"] || "0").replace("¥", ""));
+    transaction["分类"] = await mapCategory(
+      record["交易类型"] || "",
+      record["商品"] || "",
+      record["交易对方"] || "",
+      amount,
+      categoryMap,
+      smartCategory,
+    );
+    transaction["转账"] = "";
+    if (record["收/支"] === "支出") {
+      const fee = -Math.abs(amount);
+      transaction["金额"] = fee.toString();
     } else {
-      transaction["交易对方"] = "";
-      const amount = parseFloat((record["金额(元)"] || "0").replace("¥", ""));
-      transaction["分类"] = await mapCategory(
-        record["交易类型"] || "",
-        record["商品"] || "",
-        record["交易对方"] || "",
-        amount,
-        categoryMap,
-        smartCategory,
-      );
-      transaction["转账"] = mapAccount(record["交易对方"] || "", accountMap);
       transaction["金额"] = (record["金额(元)"] || "0").replace("¥", "");
     }
     transaction["标签"] = "";
-    transaction["备注"] = "";
+    transaction["备注"] = record["备注"] || "";
     transaction["账单人"] = owner;
+    transaction["来源"] = "微信";
     transactions.push(transaction);
   }
 
@@ -344,8 +313,8 @@ export function saveData(
       ...transaction,
       账单人: transactionOwner,
       // 确保owner字段也设置，用于后端的兼容性
-      owner: transactionOwner,
-      平台: platformMap[platform as keyof typeof platformMap] || platform,
+      // owner: transactionOwner,
+      // 平台: platformMap[platform as keyof typeof platformMap] || platform,
     };
   });
   const filepath = path.join(yearDir, filename);
@@ -375,7 +344,7 @@ export function saveData(
         "标签",
         "金额",
         "账单人",
-        "平台",
+        "来源",
       ],
     });
     writeFileSync(monthPath, mergedOutput);
@@ -397,7 +366,7 @@ export function saveData(
             "标签",
             "金额",
             "账单人",
-            "平台",
+            "来源",
           ],
         }),
       );
