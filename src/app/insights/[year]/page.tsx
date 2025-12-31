@@ -39,6 +39,13 @@ import {
   getCategoryColor,
   COLOR_PALETTE,
 } from "@/lib/colors";
+import dynamic from "next/dynamic";
+const EchartsWordcloud = dynamic(
+  () => import("@/components/charts/EchartsWordcloud"),
+  { ssr: false },
+);
+import EchartComponent from "@/components/charts/EchartComponent";
+import ConsumptionDistributionChart from "@/components/charts/ConsumptionDistributionChart";
 
 interface CustomContentProps {
   x: number;
@@ -117,6 +124,9 @@ export default function InsightsPage({
   const [wordCloudData, setWordCloudData] = useState<
     InsightsResponse["wordCloudData"]
   >([]);
+  const [boxPlotData, setBoxPlotData] = useState<
+    InsightsResponse["boxPlotData"] | null
+  >(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +144,7 @@ export default function InsightsPage({
         spendingHabits,
         funnelData,
         wordCloudData,
+        boxPlotData,
       } = await apiClient.getInsights(year);
       setSankeyData(sankeyData);
       setTopMerchants(topMerchants);
@@ -144,6 +155,7 @@ export default function InsightsPage({
       setSpendingScenarios(spendingScenarios);
       setSpendingHabits(spendingHabits);
       setWordCloudData(wordCloudData);
+      setBoxPlotData(boxPlotData);
     } catch (err) {
       console.error("Failed to fetch insights:", err);
       setError("Failed to load insights data");
@@ -165,47 +177,12 @@ export default function InsightsPage({
     parseYear();
   }, [params]);
 
-  // Mock data - replace with real data from your API
-  const spendingByCategory = [
-    { name: "百货", value: 40000 },
-    { name: "住房", value: 30000 },
-    { name: "餐饮", value: 20000 },
-    { name: "交通", value: 18000 },
-    { name: "医疗", value: 10000 },
-    { name: "其他", value: 5000 },
-  ];
-
-  const monthlyTrend = [
-    { name: "1月", 百货: 4000, 餐饮: 2400, 交通: 2400 },
-    { name: "2月", 百货: 3000, 餐饮: 1398, 交通: 2210 },
-    { name: "3月", 百货: 2000, 餐饮: 9800, 交通: 2290 },
-    { name: "4月", 百货: 2780, 餐饮: 3908, 交通: 2000 },
-    { name: "5月", 百货: 1890, 餐饮: 4800, 交通: 2181 },
-    { name: "6月", 百货: 2390, 餐饮: 3800, 交通: 2500 },
-  ];
-
-  const paymentMethods = [
-    { name: "微信支付", value: 45 },
-    { name: "支付宝", value: 35 },
-    { name: "银行卡", value: 15 },
-    { name: "现金", value: 5 },
-  ];
-
-  const COLORS = [
-    "#0088FE",
-    "#00C49F",
-    "#FFBB28",
-    "#FF8042",
-    "#8884d8",
-    "#82ca9d",
-  ];
-
   return (
     <div className="p-4 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">消费洞察 {year}</h1>
 
       {/* 资金流向全景 */}
-      <Card className="mb-6">
+      {/* <Card className="mb-6">
         <CardHeader>
           <CardTitle>资金流向全景</CardTitle>
         </CardHeader>
@@ -221,6 +198,87 @@ export default function InsightsPage({
               </div>
             ) : sankeyData ? (
               <SankeyChart data={sankeyData} />
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                暂无数据
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card> */}
+
+      {/* 资金流向全景2 - ECharts Version */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>资金流向全景</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[600px] w-full">
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center h-full text-red-500">
+                加载失败: {error}
+              </div>
+            ) : sankeyData ? (
+              <EchartComponent
+                option={{
+                  tooltip: {
+                    trigger: "item",
+                    triggerOn: "mousemove",
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    formatter: (params: any) => {
+                      if (params.dataType === "edge") {
+                        return `${params.data.source} > ${params.data.target}<br/>金额: ${new Intl.NumberFormat(
+                          "zh-CN",
+                          {
+                            style: "currency",
+                            currency: "CNY",
+                            minimumFractionDigits: 2,
+                          },
+                        ).format(params.data.value)}`;
+                      } else {
+                        return `${params.name}<br/>金额: ${new Intl.NumberFormat(
+                          "zh-CN",
+                          {
+                            style: "currency",
+                            currency: "CNY",
+                            minimumFractionDigits: 2,
+                          },
+                        ).format(params.data?.value || params.value || 0)}`;
+                      }
+                    },
+                  },
+                  series: [
+                    {
+                      type: "sankey",
+                      layoutIterations: 0,
+                      nodeGap: 12,
+                      data: sankeyData.nodes.map((node) => ({
+                        name: node.name,
+                        itemStyle: {
+                          color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+                        },
+                      })),
+                      links: sankeyData.links,
+                      emphasis: {
+                        focus: "adjacency",
+                      },
+                      lineStyle: {
+                        color: "gradient",
+                        curveness: 0.5,
+                      },
+                      label: {
+                        color: "rgba(0,0,0,0.7)",
+                        fontFamily: "Arial",
+                      },
+                    },
+                  ],
+                }}
+                style={{ width: "100%", height: "100%" }}
+              />
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
                 暂无数据
@@ -538,6 +596,8 @@ export default function InsightsPage({
           </CardContent>
         </Card>
       </div>
+      <h1 className="text-2xl font-bold text-gray-800 mb-4">深度洞察</h1>
+      <h2 className="text-xl font-semibold text-gray-700 mb-6">时间密码</h2>
       {/* 消费趋势河流 */}
       <Card className="mb-6">
         <CardHeader>
@@ -617,6 +677,8 @@ export default function InsightsPage({
           </div>
         </CardContent>
       </Card>
+
+      <h2 className="text-xl font-semibold text-gray-700 mb-6">决策心理</h2>
 
       {/* 消费象限 */}
       <Card className="mb-6">
@@ -743,6 +805,9 @@ export default function InsightsPage({
           </div>
         </CardContent>
       </Card>
+
+      <h2 className="text-xl font-semibold text-gray-700 mb-6">结构解析</h2>
+
       {/* 核心支出来源 */}
       <Card className="mb-6">
         <CardHeader>
@@ -846,44 +911,41 @@ export default function InsightsPage({
         </CardContent>
       </Card>
 
-      {/* 消费热词云 - Using Treemap as an alternative */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>消费热词云</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <Treemap
-                data={wordCloudData}
-                dataKey="value"
-                aspectRatio={4 / 3}
-                stroke="#fff"
-                fill="#8884d8"
-                animationDuration={1000}
-                content={
-                  <CustomContent
-                    colors={COLOR_PALETTE}
-                    x={0}
-                    y={0}
-                    width={0}
-                    height={0}
-                    index={0}
-                    name={""}
-                  />
-                }
-              >
-                <Tooltip
-                  formatter={(value: number, name: string) => [
-                    `¥${value.toLocaleString()}`,
-                    name,
-                  ]}
-                />
-              </Treemap>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* echarts 词云 */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>消费热词云</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[400px]">
+            <EchartsWordcloud
+              data={wordCloudData}
+              shape="circle"
+              onWordClick={(params) => {
+                console.log("Word clicked:", params);
+                // You can add additional interaction logic here
+              }}
+            />
+          </CardContent>
+        </Card>
+
+        {/* 消费分布云图 */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>消费分布云图</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ConsumptionDistributionChart
+              data={boxPlotData || { categories: [], data: [], box_data: [] }}
+              loading={!boxPlotData}
+              onDataPointClick={(data) => {
+                console.log("Data point clicked:", data);
+                // Handle click event
+              }}
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -832,6 +832,111 @@ export async function generateWordCloudData({
   return data;
 }
 
+export interface BoxPlotData {
+  categories: string[];
+  data: Array<{
+    c: number; // category index
+    v: number; // value (amount)
+    m: string; // merchant
+    d: string; // date (YYYY-MM-DD)
+  }>;
+  box_data: number[][]; // Array of [min, q1, median, q3, max] for each category
+}
+
+export async function generateBoxPlotData({
+  year,
+  ownerId,
+}: {
+  year: number;
+  ownerId?: string;
+}): Promise<BoxPlotData> {
+  const { allExpenses: expenseTransactions } =
+    await calculateCategoryYearlyStats(year, ownerId);
+
+  if (expenseTransactions.length === 0) {
+    return { categories: [], data: [], box_data: [] };
+  }
+
+  // Group transactions by category and calculate total amount for sorting
+  const categoryTotals = new Map<string, number>();
+  expenseTransactions.forEach((tx) => {
+    const total = categoryTotals.get(tx.category) || 0;
+    categoryTotals.set(tx.category, total + tx.amount);
+  });
+
+  // Get top 8 categories by total amount
+  const topCategories = Array.from(categoryTotals.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([category]) => category);
+
+  const pointsData: Array<{ c: number; v: number; m: string; d: string }> = [];
+  const boxStats: number[][] = [];
+
+  // Process each category
+  topCategories.forEach((category, categoryIndex) => {
+    const categoryTransactions = expenseTransactions
+      .filter((tx) => tx.category === category)
+      .map((tx) => ({
+        amount: tx.amount,
+        merchant: tx.account || "未知",
+        date: tx.date || new Date().toISOString().split("T")[0],
+      }));
+
+    // Add to points data
+    categoryTransactions.forEach((tx) => {
+      pointsData.push({
+        c: categoryIndex,
+        v: tx.amount,
+        m: tx.merchant,
+        d: tx.date,
+      });
+    });
+
+    // Calculate box plot statistics
+    if (categoryTransactions.length > 0) {
+      const amounts = categoryTransactions
+        .map((tx) => tx.amount)
+        .sort((a, b) => a - b);
+      const min = amounts[0];
+      const max = amounts[amounts.length - 1];
+      const median = calculatePercentile(amounts, 50);
+      const q1 = calculatePercentile(amounts, 25);
+      const q3 = calculatePercentile(amounts, 75);
+
+      boxStats.push([min, q1, median, q3, max]);
+    } else {
+      boxStats.push([] as unknown as number[]);
+    }
+  });
+
+  return {
+    categories: topCategories,
+    data: pointsData,
+    box_data: boxStats,
+  };
+}
+
+// Helper function to calculate percentiles
+function calculatePercentile(
+  sortedValues: number[],
+  percentile: number,
+): number {
+  if (sortedValues.length === 0) return 0;
+
+  const index = (percentile / 100) * (sortedValues.length - 1);
+  const lower = Math.floor(index);
+  const upper = Math.ceil(index);
+
+  if (lower === upper) return sortedValues[lower];
+
+  // Linear interpolation
+  const fraction = index - lower;
+  return (
+    sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * fraction
+  );
+}
+
 export interface InsightsData {
   sankeyData: SankeyData;
   topMerchants: MerchantStats[];
@@ -845,4 +950,5 @@ export interface InsightsData {
   spendingHabits: SpendingHabits;
   funnelData: FunnelData[];
   wordCloudData: WordCloudData[];
+  boxPlotData: BoxPlotData;
 }

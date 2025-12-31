@@ -10,6 +10,7 @@ import {
   analyzeSpendingHabits,
   generateFunnelData,
   generateWordCloudData,
+  generateBoxPlotData,
 } from "@/lib/insights";
 
 export async function GET(request: Request) {
@@ -67,6 +68,11 @@ export async function GET(request: Request) {
       ownerId,
     });
 
+    const boxPlotData = await generateBoxPlotData({
+      year: Number(year),
+      ownerId,
+    });
+
     return NextResponse.json({
       sankeyData,
       topMerchants,
@@ -77,6 +83,7 @@ export async function GET(request: Request) {
       spendingHabits,
       funnelData,
       wordCloudData,
+      boxPlotData,
     });
   } catch (error) {
     console.error("Error in capital-flow API:", error);
