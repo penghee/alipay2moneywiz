@@ -63,20 +63,21 @@ interface CustomLinkProps {
 const CustomNode = (props: CustomNodeProps) => {
   const { x, y, width, height, index, payload, containerWidth } = props;
   const isOut = x > containerWidth / 2;
-
+  const safeY = Number.isNaN(y) ? 0 : y;
+  const safeHeight = Number.isNaN(height) ? 0 : Math.max(0, height);
   return (
     <g>
       <rect
         x={x}
-        y={y}
+        y={safeY}
         width={width}
-        height={height}
+        height={safeHeight}
         fill={COLORS[index % COLORS.length]}
         fillOpacity={0.8}
       />
       <text
         x={isOut ? x - 6 : x + width + 6}
-        y={y + height / 2}
+        y={safeY + safeHeight / 2}
         textAnchor={isOut ? "end" : "start"}
         dominantBaseline="middle"
         fontSize={12}
@@ -85,7 +86,7 @@ const CustomNode = (props: CustomNodeProps) => {
       </text>
       <text
         x={isOut ? x - 6 : x + width + 6}
-        y={y + height / 2 + 16}
+        y={safeY + safeHeight / 2 + 16}
         textAnchor={isOut ? "end" : "start"}
         dominantBaseline="middle"
         fontSize={12}

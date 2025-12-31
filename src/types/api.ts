@@ -99,6 +99,9 @@ export interface Expense {
   remark?: string;
   isRefund?: boolean;
   owner?: string;
+  merchant: string;
+  source: string;
+  account: string;
 }
 
 export interface CategoryMonthlyData {
@@ -108,20 +111,13 @@ export interface CategoryMonthlyData {
   isRefund: boolean;
 }
 
-export interface TopExpense {
-  date: string;
-  category: string;
-  amount: number;
-  description: string;
-  isRefund?: boolean;
-}
-
 export interface CategoryYearlyStats {
   categories: string[];
   monthlyData: Record<string, CategoryMonthlyData[]>;
   totalByCategory: Record<string, CategoryStats>;
   totalExpense: number;
-  topExpenses: TopExpense[];
+  topExpenses: Expense[];
+  allExpenses: Expense[];
 }
 
 export interface Summary {
@@ -193,3 +189,5 @@ export interface PreviewUploadResponse {
   owner?: string;
   transactions?: TransactionPreview[];
 }
+import type { InsightsData } from "@/lib/insights";
+export type InsightsResponse = InsightsData;

@@ -96,6 +96,8 @@ export default function NewTransactionPage() {
         amount: amount,
         owner: formData.owner,
         type: formData.type as "income" | "expense",
+        source: "manual",
+        merchant: "",
       };
 
       // Send the transaction to the API

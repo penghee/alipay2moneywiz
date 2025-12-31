@@ -10,7 +10,6 @@ import {
   Expense,
   CategoryStats,
   CategoryMonthlyData,
-  TopExpense,
   CategoryYearlyStats,
   YearlyStats,
 } from "@/types/api";
@@ -27,29 +26,17 @@ export interface Transaction {
   金额: string;
   owner?: string;
   账单人?: string;
+  来源?: string;
 }
 
 // 读取CSV文件
 export function readCSV(filePath: string): Transaction[] {
   const content = readFileSync(filePath, "utf8");
-  interface CsvRecord {
-    账户: string;
-    转账: string;
-    描述: string;
-    交易对方: string;
-    分类: string;
-    日期: string;
-    备注: string;
-    标签: string;
-    金额: string;
-    账单人?: string;
-  }
-
   const records = parse(content, {
     delimiter: ",",
     columns: true,
     trim: true,
-  }) as CsvRecord[];
+  }) as Transaction[];
 
   // Map the 账单人 field to owner
   return records.map((record) => ({
@@ -183,6 +170,9 @@ export function calculateMonthlyStats(
         tags: t["标签"] || "",
         owner: t["账单人"] || "",
         remark: t["备注"] || "",
+        merchant: t["交易对方"] || "",
+        source: t["来源"] || "",
+        account: t["账户"] || "",
       };
       expenses.push(expenseItem);
 
@@ -293,6 +283,9 @@ export function calculateYearlyStats(
           tags: t["标签"] || "",
           owner: t["账单人"] || "",
           remark: t["备注"] || "",
+          merchant: t["交易对方"] || "",
+          source: t["来源"] || "",
+          account: t["账户"] || "",
         };
         expenses.push(expense);
         // 聚合分类统计
@@ -488,7 +481,7 @@ export function calculateCategoryYearlyStats(
   let totalExpense = 0;
   const categoriesSet = new Set<string>();
   // 获取所有支出记录并按金额降序排序
-  const allExpenses: TopExpense[] = [];
+  const allExpenses: Expense[] = [];
 
   // 使用新的函数读取并过滤CSV文件
   const transactions = readAndFilterCSVFiles(dataDir);
@@ -511,11 +504,18 @@ export function calculateCategoryYearlyStats(
     if (isExpense(t)) {
       // 只处理支出
       allExpenses.push({
+        id: `${t.日期}-${t.描述}-${amount}`,
         date: t.日期,
         category: t.分类,
         amount: Math.abs(amount),
         isRefund: amount > 0,
-        description: t.描述 || t.交易对方 || "",
+        description: t.描述,
+        tags: t.标签 || "",
+        owner: t.owner,
+        merchant: t.交易对方,
+        remark: t.备注 || "",
+        source: t.来源 || "",
+        account: t.账户 || "",
       });
 
       const month = (new Date(t.日期).getMonth() + 1)
@@ -551,10 +551,13 @@ export function calculateCategoryYearlyStats(
         isRefund: amount > 0,
         category,
         date: t["日期"],
-        description: t["描述"] || t["交易对方"] || "无描述",
+        description: t["描述"] || "",
         tags: t["标签"] || "",
         owner: t["账单人"] || "",
+        merchant: t["交易对方"] || "",
         remark: t["备注"] || "",
+        source: t["来源"] || "",
+        account: t["账户"] || "",
       });
     }
   }
@@ -575,9 +578,7 @@ export function calculateCategoryYearlyStats(
 
   // 按金额降序排序并取前20
   const topExpenses = allExpenses
-    .sort(
-      (a: TopExpense, b: TopExpense) => Math.abs(b.amount) - Math.abs(a.amount),
-    )
+    .sort((a: Expense, b: Expense) => Math.abs(b.amount) - Math.abs(a.amount))
     .slice(0, 100);
 
   // 返回结果
@@ -587,5 +588,6 @@ export function calculateCategoryYearlyStats(
     totalByCategory: totalByCategoryAbs,
     totalExpense: Math.abs(totalExpense),
     topExpenses: topExpenses,
+    allExpenses,
   };
 }

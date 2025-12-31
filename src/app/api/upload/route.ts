@@ -74,7 +74,18 @@ export async function processAlipay(
   const arrayBuffer = await content.arrayBuffer();
   // Convert ArrayBuffer to Buffer
   const buffer = Buffer.from(arrayBuffer);
-  const str = iconv.decode(buffer, "utf-8");
+  // Try UTF-8 first, then fall back to GBK if it fails
+  let str: string;
+  try {
+    str = iconv.decode(buffer, "utf-8");
+    // Simple check if the decoded content makes sense
+    if (!str.includes("支付宝") && !str.includes("交易号")) {
+      throw new Error("UTF-8 decoding may be incorrect, trying GBK");
+    }
+  } catch (e) {
+    console.log("Falling back to GBK encoding");
+    str = iconv.decode(buffer, "GBK");
+  }
   await fsp.writeFile("temp_res", str);
   // read line by line
   const fileStream = fs.createReadStream("temp_res");
@@ -107,12 +118,6 @@ export async function processAlipay(
   for (const record of records) {
     const transaction: Record<string, string> = {};
     if (record["交易时间"] === "") {
-      continue;
-    }
-    if (
-      transaction["描述"].includes("亲情卡") ||
-      transaction["描述"].includes("亲属卡")
-    ) {
       continue;
     }
 

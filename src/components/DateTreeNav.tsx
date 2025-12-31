@@ -135,6 +135,18 @@ export default function DateTreeNav() {
               >
                 全年预算
               </Link>
+              {/* 全年洞察 */}
+              <Link
+                href={`/insights/${year}`}
+                className={`block px-4 py-1 hover:bg-gray-700 rounded-md ${
+                  pathname === `/insights/${year}`
+                    ? "text-blue-400"
+                    : "text-gray-400"
+                }`}
+              >
+                全年洞察
+              </Link>
+
               {months.map((month: string | number) => {
                 // Convert month to string and ensure it's 2 digits
                 const monthStr = String(month);

@@ -12,6 +12,7 @@ import type {
   CategoryYearlyStats,
   PreviewUploadResponse,
   TransactionPreview,
+  InsightsResponse,
 } from "@/types/api";
 import type { Asset, AssetSummary } from "@/types/asset";
 
@@ -315,6 +316,19 @@ export class ApiClient {
     const url = `/api/years/${year}/months${queryString ? `?${queryString}` : ""}`;
     const result = await this.request<MonthsResponse>(url);
     return result.months;
+  }
+
+  // ========== insights ==========
+  async getInsights(year: number, owner?: string): Promise<InsightsResponse> {
+    const queryParams = new URLSearchParams();
+    queryParams.append("year", year.toString());
+    if (owner && owner !== "all") {
+      queryParams.append("owner", owner);
+    }
+    const queryString = queryParams.toString();
+    const url = `/api/insights?${queryString}`;
+    const result = await this.request<InsightsResponse>(url);
+    return result;
   }
 }
 

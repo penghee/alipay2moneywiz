@@ -66,3 +66,24 @@ export function resetColorAssignment(): void {
   Object.keys(assignedColors).forEach((key) => delete assignedColors[key]);
   colorIndex = 0;
 }
+
+import type { QuadrantData } from "@/lib/insights";
+
+export function getQuadrantColor(
+  frequency: number,
+  avgAmount: number,
+  data: QuadrantData[],
+): string {
+  if (data.length === 0) return "#8884d8";
+
+  const maxFreq = Math.max(...data.map((d) => d.frequency));
+  const maxAvg = Math.max(...data.map((d) => d.avgAmount));
+
+  const isHighFreq = frequency > maxFreq / 2;
+  const isHighAvg = avgAmount > maxAvg / 2;
+
+  if (isHighFreq && isHighAvg) return "#ff7f0e"; // Orange - High frequency, high amount
+  if (!isHighFreq && isHighAvg) return "#d62728"; // Red - Low frequency, high amount
+  if (isHighFreq && !isHighAvg) return "#2ca02c"; // Green - High frequency, low amount
+  return "#1f77b4"; // Blue - Low frequency, low amount
+}
