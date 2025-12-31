@@ -212,6 +212,7 @@ export interface MerchantStats {
   name: string;
   totalAmount: number;
   transactionCount: number;
+  lastTransactionDate?: string;
   categories: Record<string, { amount: number; count: number }>;
 }
 
@@ -675,7 +676,6 @@ export async function analyzeSpendingHabits({
   const fixedExpenses = allExpenses
     .filter((expense) => recurringMerchants.includes(expense.merchant || ""))
     .reduce((sum, expense) => sum + Math.abs(expense.amount), 0);
-
   const fixedExpensesRatio = (fixedExpenses / totalExpenses) * 100;
 
   // 4. Month start spending ratio (first 5 days)

@@ -230,33 +230,149 @@ export default function InsightsPage({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
         {/* 最常光顾 */}
-        <Card className="lg:col-span-1">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>最常光顾</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="space-y-2 max-h-[300px] overflow-y-auto p-4">
-              {topMerchants?.map((item, i) => (
-                <div
-                  key={i}
-                  className="p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <div className="font-medium truncate">{item.name}</div>
-                  {/* <div className="text-sm text-gray-500 dark:text-gray-400">最近消费: {item.date}</div> */}
-                  <div className="flex justify-between text-sm mt-1">
-                    <span>消费金额: ¥{item.totalAmount}</span>
-                    <span>消费次数: {item.transactionCount}次</span>
+            <div className="space-y-3 max-h-[500px] overflow-y-auto p-4">
+              {topMerchants?.map((item, i) => {
+                // Define colors for the first 3 items, then use gray for the rest
+                const colors = [
+                  "bg-orange-100 text-orange-600",
+                  "bg-purple-100 text-purple-600",
+                  "bg-green-100 text-green-600",
+                  "bg-gray-100 text-gray-600",
+                ];
+                const colorClass = colors[Math.min(i, colors.length - 1)];
+
+                return (
+                  <div
+                    key={i}
+                    className="p-4 border rounded-xl shadow-sm hover:shadow-md transition-all duration-200 bg-white dark:bg-gray-800"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-medium ${colorClass}`}
+                      >
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {item.name}
+                        </div>
+                        {/* <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {item.date && `最近消费: ${new Date(item.date).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\./g, '-')}`}
+                        </div> */}
+                      </div>
+                      <div className="flex items-end gap-6 ml-4">
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            消费金额
+                          </div>
+                          <div
+                            className={`font-medium text-base whitespace-nowrap ${i === 0 ? "text-orange-600" : i === 1 ? "text-purple-600" : i === 2 ? "text-green-600" : "text-gray-600"}`}
+                          >
+                            ¥
+                            {item.totalAmount.toLocaleString("zh-CN", {
+                              minimumFractionDigits: 2,
+                            })}
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            消费次数
+                          </div>
+                          <div className="text-sm text-gray-600 dark:text-gray-300 font-medium">
+                            {item.transactionCount}次
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
+        {/* 消费习惯 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>消费习惯</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-1 gap-4">
+              {spendingHabits ? (
+                <>
+                  <div className="p-4 border rounded-lg text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <div className="text-2xl font-bold text-primary">
+                      ¥{spendingHabits.dailyAvg.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      日均消费
+                    </div>
+                  </div>
 
+                  <div className="p-4 border rounded-lg text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <div className="text-2xl font-bold text-primary">
+                      {spendingHabits.weekendRatio}%
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      周末消费占比
+                    </div>
+                  </div>
+
+                  <div className="p-4 border rounded-lg text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <div className="text-2xl font-bold text-primary">
+                      {spendingHabits.fixedExpensesRatio}%
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      固定支出占比
+                    </div>
+                  </div>
+
+                  <div className="p-4 border rounded-lg text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <div className="text-2xl font-bold text-primary">
+                      {spendingHabits.monthStartRatio}%
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      月初消费占比
+                    </div>
+                  </div>
+
+                  {/* <div className="p-4 border rounded-lg text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <div className="text-2xl font-bold text-primary">
+                      {spendingHabits.lateNightRatio}%
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      深夜消费占比
+                    </div>
+                  </div> */}
+
+                  <div className="p-4 border rounded-lg text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <div className="text-2xl font-bold text-primary">
+                      {spendingHabits.engelCoefficient}%
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      恩格尔系数
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="col-span-full text-center py-8 text-gray-500">
+                  加载中...
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* 消费场景 */}
-        <Card className="mb-6">
+        <Card>
           <CardHeader>
             <CardTitle>消费场景</CardTitle>
           </CardHeader>
@@ -372,80 +488,6 @@ export default function InsightsPage({
                 </div>
               </TabsContent>
             </Tabs>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* 消费习惯 */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>消费习惯</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {spendingHabits ? (
-                <>
-                  <div className="p-4 border rounded-lg text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <div className="text-2xl font-bold text-primary">
-                      ¥{spendingHabits.dailyAvg.toLocaleString()}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      日均消费
-                    </div>
-                  </div>
-
-                  <div className="p-4 border rounded-lg text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <div className="text-2xl font-bold text-primary">
-                      {spendingHabits.weekendRatio}%
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      周末消费占比
-                    </div>
-                  </div>
-
-                  <div className="p-4 border rounded-lg text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <div className="text-2xl font-bold text-primary">
-                      {spendingHabits.fixedExpensesRatio}%
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      固定支出占比
-                    </div>
-                  </div>
-
-                  <div className="p-4 border rounded-lg text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <div className="text-2xl font-bold text-primary">
-                      {spendingHabits.monthStartRatio}%
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      月初消费占比
-                    </div>
-                  </div>
-
-                  <div className="p-4 border rounded-lg text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <div className="text-2xl font-bold text-primary">
-                      {spendingHabits.lateNightRatio}%
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      深夜消费占比
-                    </div>
-                  </div>
-
-                  <div className="p-4 border rounded-lg text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <div className="text-2xl font-bold text-primary">
-                      {spendingHabits.engelCoefficient}%
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      恩格尔系数
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="col-span-full text-center py-8 text-gray-500">
-                  加载中...
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
         {/* 消费金额漏斗 */}
