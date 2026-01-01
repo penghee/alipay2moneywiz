@@ -581,6 +581,7 @@ export function calculateCategoryYearlyStats(
     .sort((a: Expense, b: Expense) => Math.abs(b.amount) - Math.abs(a.amount))
     .slice(0, 100);
 
+  const allExpensesWithoutRefund = allExpenses.filter((e) => !e.isRefund);
   // 返回结果
   return {
     categories: Array.from(categories),
@@ -588,6 +589,6 @@ export function calculateCategoryYearlyStats(
     totalByCategory: totalByCategoryAbs,
     totalExpense: Math.abs(totalExpense),
     topExpenses: topExpenses,
-    allExpenses,
+    allExpenses: allExpensesWithoutRefund,
   };
 }

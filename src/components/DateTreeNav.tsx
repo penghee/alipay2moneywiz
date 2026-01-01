@@ -108,7 +108,9 @@ export default function DateTreeNav() {
               <Link
                 href={`/year/${year}`}
                 className={`block px-4 py-1 hover:bg-gray-700 rounded-md ${
-                  pathname === `/${year}` ? "text-blue-400" : "text-gray-400"
+                  pathname === `/year/${year}`
+                    ? "text-blue-400"
+                    : "text-gray-400"
                 }`}
               >
                 全年流水
@@ -117,7 +119,7 @@ export default function DateTreeNav() {
               <Link
                 href={`/year/${year}/category`}
                 className={`block px-4 py-1 hover:bg-gray-700 rounded-md ${
-                  pathname === `/${year}/category`
+                  pathname === `/year/${year}/category`
                     ? "text-blue-400"
                     : "text-gray-400"
                 }`}
@@ -128,7 +130,7 @@ export default function DateTreeNav() {
               <Link
                 href={`/year/${year}/budget`}
                 className={`block px-4 py-1 hover:bg-gray-700 rounded-md ${
-                  pathname === `/${year}/budget`
+                  pathname === `/year/${year}/budget`
                     ? "text-blue-400"
                     : "text-gray-400"
                 }`}

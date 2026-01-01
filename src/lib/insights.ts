@@ -62,8 +62,26 @@ function standardizeMerchantName(name: string | null | undefined): string {
     return "水电煤";
   }
 
-  if (cleanName.includes("保险")) {
+  if (["保险", "交强险", "保费"].some((term) => cleanName.includes(term))) {
     return "保险";
+  }
+
+  if (["长宁妇幼", "长宁区妇幼"].some((term) => cleanName.includes(term))) {
+    return "长宁妇幼";
+  }
+
+  if (["房租", "家营物业"].some((term) => cleanName.includes(term))) {
+    return "房租";
+  }
+
+  if (
+    ["火车票", "12306", "中铁网络"].some((term) => cleanName.includes(term))
+  ) {
+    return "12306";
+  }
+
+  if (["高德打车"].some((term) => cleanName.includes(term))) {
+    return "高德打车";
   }
 
   return cleanName || name;
@@ -138,8 +156,9 @@ export async function generateSankeyData({
 
       // Get significant merchants (over threshold or top 1)
       const significantMerchants = sortedMerchants
+        .filter(([merchant, _]) => merchant !== "未知商户" && merchant !== "/")
         .filter(([_, amount], index) => amount >= threshold || index === 0)
-        .slice(0, 3); // Limit to top 10
+        .slice(0, 5); // Limit to top 10
 
       // Add merchant nodes and links
       for (const [merchant, amount] of significantMerchants) {
@@ -343,7 +362,10 @@ export async function generateQuadrantData({
   // Group by merchant
   const merchantStats = allExpenses.reduce(
     (acc, expense) => {
-      const merchant = standardizeMerchantName(expense.merchant || "未知商家");
+      // 兼容描述和商家
+      const merchant = standardizeMerchantName(
+        expense.merchant || expense.description || "未知商家",
+      );
       if (!acc[merchant]) {
         acc[merchant] = {
           name: merchant,
@@ -373,7 +395,14 @@ export async function generateQuadrantData({
 
   // Convert to array and calculate metrics
   const result = Object.values(merchantStats)
-    .filter((merchant) => merchant.name && merchant.name !== "未知商家")
+    // .filter(
+    //   (merchant) =>
+    //     merchant.name &&
+    //     merchant.name !== "未知商家" &&
+    //     merchant.name !== "/" &&
+    //     merchant.name !== "房租" &&
+    //     merchant.name !== "保险"
+    // )
     .filter(
       (merchant) =>
         merchant.totalAmount >= minTotalAmount &&
@@ -427,39 +456,47 @@ export async function generateThemeRiverData({
     .slice(0, topN)
     .map(([category]) => category);
 
-  // Group by month and category
-  const monthlyData = allExpenses.reduce(
-    (acc, expense) => {
-      if (!topCategories.includes(expense.category)) {
-        return acc; // Skip non-top categories
-      }
+  // Generate all months in the year
+  const allMonths = Array.from(
+    { length: 12 },
+    (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`,
+  );
 
-      const date = new Date(expense.date);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      const amount = Math.abs(expense.amount);
-
-      if (!acc[monthKey]) {
-        acc[monthKey] = {};
-      }
-
-      acc[monthKey][expense.category] =
-        (acc[monthKey][expense.category] || 0) + amount;
+  // Initialize data structure for all months and categories
+  const monthlyData = allMonths.reduce(
+    (acc, month) => {
+      acc[month] = topCategories.reduce(
+        (catAcc, category) => {
+          catAcc[category] = 0;
+          return catAcc;
+        },
+        {} as Record<string, number>,
+      );
       return acc;
     },
     {} as Record<string, Record<string, number>>,
   );
 
-  // Generate data points for each month and category
-  const data: ThemeRiverData[] = [];
-  const months = Object.keys(monthlyData).sort();
+  // Fill in the actual data
+  allExpenses.forEach((expense) => {
+    if (!topCategories.includes(expense.category)) return;
 
-  months.forEach((month) => {
-    const monthData = monthlyData[month];
+    const date = new Date(expense.date);
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+    if (monthKey in monthlyData) {
+      monthlyData[monthKey][expense.category] += Math.abs(expense.amount);
+    }
+  });
+
+  // Generate the final data array
+  const data: ThemeRiverData[] = [];
+  allMonths.forEach((month) => {
     topCategories.forEach((category) => {
       data.push({
         date: month,
         category,
-        value: monthData[category] || 0,
+        value: monthlyData[month][category],
       });
     });
   });
@@ -804,7 +841,9 @@ export async function generateWordCloudData({
   // Group by merchant and calculate total amount and count
   const merchantStats = allExpenses.reduce(
     (acc, expense) => {
-      const merchant = standardizeMerchantName(expense.merchant);
+      const merchant = standardizeMerchantName(
+        expense.merchant || expense.description || "未知商家",
+      );
       if (!acc[merchant]) {
         acc[merchant] = {
           amount: 0,

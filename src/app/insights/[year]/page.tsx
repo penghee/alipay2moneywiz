@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -46,6 +47,7 @@ const EchartsWordcloud = dynamic(
 );
 import EchartComponent from "@/components/charts/EchartComponent";
 import ConsumptionDistributionChart from "@/components/charts/ConsumptionDistributionChart";
+import { formatMoney } from "@/lib/utils";
 
 interface CustomContentProps {
   x: number;
@@ -177,8 +179,25 @@ export default function InsightsPage({
     parseYear();
   }, [params]);
 
+  const calculateTrimmedMean = (values: number[]) => {
+    if (values.length <= 2) {
+      return values.length > 0
+        ? values.reduce((sum, val) => sum + val, 0) / values.length
+        : 0;
+    }
+
+    const sorted = [...values].sort((a, b) => a - b);
+    // Remove one lowest and one highest value
+    // const trimmed = sorted.slice(1, -1);
+    return sorted.reduce((sum, val) => sum + val, 0) / sorted.length;
+  };
+
+  // Calculate median average amount
+  const avgFreq = calculateTrimmedMean(quadrantData.map((d) => d.frequency));
+  const avgAmount = calculateTrimmedMean(quadrantData.map((d) => d.avgAmount));
+
   return (
-    <div className="p-4 max-w-7xl mx-auto">
+    <div className="p-4 mx-auto">
       <h1 className="text-2xl font-bold mb-6">消费洞察 {year}</h1>
 
       {/* 资金流向全景 */}
@@ -228,7 +247,7 @@ export default function InsightsPage({
                   tooltip: {
                     trigger: "item",
                     triggerOn: "mousemove",
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                     formatter: (params: any) => {
                       if (params.dataType === "edge") {
                         return `${params.data.source} > ${params.data.target}<br/>金额: ${new Intl.NumberFormat(
@@ -599,7 +618,7 @@ export default function InsightsPage({
       <h1 className="text-2xl font-bold text-gray-800 mb-4">深度洞察</h1>
       <h2 className="text-xl font-semibold text-gray-700 mb-6">时间密码</h2>
       {/* 消费趋势河流 */}
-      <Card className="mb-6">
+      {/* <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             消费趋势河流
@@ -676,6 +695,149 @@ export default function InsightsPage({
             </ResponsiveContainer>
           </div>
         </CardContent>
+      </Card> */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            消费趋势河流
+            <div className="ml-1 group relative">
+              <span className="text-xs text-gray-400 cursor-help">ⓘ</span>
+              <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 text-xs text-gray-700 bg-white rounded shadow-lg border border-gray-200 z-10">
+                <p>
+                  <strong>消费趋势分析：</strong>
+                  <br />
+                  展示各消费分类随时间的金额变化趋势，帮助您了解消费模式的变化。
+                </p>
+              </div>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[500px]">
+            {themeRiverData.data.length > 0 ? (
+              <EchartComponent
+                option={{
+                  tooltip: {
+                    trigger: "axis",
+                    axisPointer: {
+                      type: "line",
+                      lineStyle: {
+                        color: "rgba(0,0,0,0.2)",
+                        width: 1,
+                        type: "solid",
+                      },
+                    },
+                    formatter: (params: any) => {
+                      if (!Array.isArray(params) || params.length === 0)
+                        return "";
+                      const date = new Date(params[0].axisValue);
+                      const dateStr =
+                        date.getFullYear() +
+                        "-" +
+                        (date.getMonth() + 1).toString().padStart(2, "0");
+
+                      let result = `<div style="font-weight:bold;margin-bottom:5px;">${dateStr}</div>`;
+                      const sortedParams = [...params].sort(
+                        (a: any, b: any) => b.value[1] - a.value[1],
+                      );
+
+                      sortedParams.forEach((item: any) => {
+                        const name = item.value[2];
+                        const value = item.value[1];
+                        if (value > 0) {
+                          result += `
+                      <div style="display:flex;justify-content:space-between;align-items:center;min-width:150px;">
+                        <span>${item.marker} ${name}</span>
+                        <span style="font-weight:bold;margin-left:15px;">¥${formatMoney(value)}</span>
+                      </div>`;
+                        }
+                      });
+                      return result;
+                    },
+                  },
+                  legend: {
+                    data: themeRiverData.categories,
+                    top: 10,
+                    textStyle: {
+                      fontSize: 12,
+                    },
+                  },
+                  singleAxis: {
+                    top: 50,
+                    bottom: 50,
+                    axisTick: {},
+                    axisLabel: {
+                      formatter: (value: number) => {
+                        const date = new Date(value);
+                        return `${date.getMonth() + 1}月`;
+                      },
+                    },
+                    type: "time",
+                    axisPointer: {
+                      animation: true,
+                      label: {
+                        show: true,
+                        formatter: (params: any) => {
+                          const date = new Date(params.value);
+                          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+                        },
+                      },
+                    },
+                    splitLine: {
+                      show: true,
+                      lineStyle: {
+                        type: "dashed",
+                        opacity: 0.2,
+                      },
+                    },
+                  },
+                  series: [
+                    {
+                      type: "themeRiver",
+                      emphasis: {
+                        itemStyle: {
+                          shadowBlur: 20,
+                          shadowColor: "rgba(0, 0, 0, 0.8)",
+                        },
+                      },
+                      data: themeRiverData.data.map((item) => {
+                        const date = new Date(item.date);
+                        // Use the 15th of each month for consistent positioning
+                        const midMonth = new Date(
+                          date.getFullYear(),
+                          date.getMonth(),
+                          15,
+                        );
+                        return [
+                          midMonth.getTime(), // Use mid-month timestamp
+                          item.value,
+                          item.category,
+                        ];
+                      }),
+                      itemStyle: {
+                        color: (params: any) =>
+                          getCategoryColor(params.data[2]),
+                      },
+                    },
+                  ],
+                }}
+                style={{ width: "100%", height: "100%" }}
+                onChartReady={(chart) => {
+                  const handleResize = () => chart.resize();
+                  window.addEventListener("resize", handleResize);
+                  return () =>
+                    window.removeEventListener("resize", handleResize);
+                }}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-500">
+                  {loading ? "加载中..." : "暂无数据"}
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
       </Card>
 
       <h2 className="text-xl font-semibold text-gray-700 mb-6">决策心理</h2>
@@ -704,104 +866,100 @@ export default function InsightsPage({
         </CardHeader>
         <CardContent>
           <div className="h-[600px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <ScatterChart
-                margin={{ top: 20, right: 30, left: 30, bottom: 60 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  type="number"
-                  dataKey="frequency"
-                  name="消费频次"
-                  label={{
-                    value: "消费频次 (次)",
-                    position: "bottom",
-                    offset: 20,
-                  }}
-                />
-                <YAxis
-                  type="number"
-                  dataKey="avgAmount"
-                  name="平均金额"
-                  label={{
-                    value: "平均金额 (¥)",
-                    angle: -90,
-                    position: "left",
-                    offset: 10,
-                  }}
-                />
-                <ZAxis
-                  type="number"
-                  dataKey="totalAmount"
-                  range={[100, 1000]}
-                  name="总金额"
-                />
-                <Tooltip
-                  formatter={(
-                    value: number,
-                    name: string,
-                    props: { payload?: { name?: string } },
-                  ) => {
-                    const merchant = props?.payload?.name || "";
-                    if (name === "平均金额")
-                      return [
-                        `¥${value.toLocaleString()}`,
-                        `${merchant} - ${name}`,
-                      ];
-                    if (name === "总金额")
-                      return [
-                        `¥${value.toLocaleString()}`,
-                        `${merchant} - ${name}`,
-                      ];
-                    return [value, name];
-                  }}
-                />
-                <Legend />
-                <ReferenceLine
-                  x={
-                    quadrantData.length > 0
-                      ? Math.max(...quadrantData.map((d) => d.frequency)) / 2
-                      : 0
-                  }
-                  stroke="#888"
-                  label={{
-                    value: "高频",
-                    position: "top",
-                    fill: "#666",
-                  }}
-                />
-                <ReferenceLine
-                  y={
-                    quadrantData.length > 0
-                      ? Math.max(...quadrantData.map((d) => d.avgAmount)) / 2
-                      : 0
-                  }
-                  stroke="#888"
-                  label={{
-                    value: "高价",
-                    position: "right",
-                    fill: "#666",
-                  }}
-                />
-                <Scatter
-                  name="商家"
-                  data={quadrantData}
-                  fill="#8884d8"
-                  fillOpacity={0.8}
-                >
-                  {quadrantData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={getQuadrantColor(
-                        entry.frequency,
-                        entry.avgAmount,
-                        quadrantData,
-                      )}
-                    />
-                  ))}
-                </Scatter>
-              </ScatterChart>
-            </ResponsiveContainer>
+            <EchartComponent
+              option={{
+                tooltip: {
+                  trigger: "item",
+                  formatter: (params: any) => {
+                    const item = params.data;
+                    return `
+                      <div style="font-weight:bold;margin-bottom:5px;">${item.name}</div>
+                      分类：${item.category}<br/>
+                      频次：${item.frequency} 次<br/>
+                      均价：¥${formatMoney(item.avgAmount)}<br/>
+                      总额：¥${formatMoney(item.totalAmount)}
+                    `;
+                  },
+                },
+                grid: {
+                  left: "5%",
+                  right: "10%",
+                  bottom: "10%",
+                  top: "10%",
+                  containLabel: true,
+                },
+                xAxis: {
+                  name: "消费频次 (次)",
+                  type: "value",
+                  nameLocation: "middle",
+                  nameGap: 30,
+                  axisLine: { onZero: false },
+                  axisLabel: {
+                    formatter: (value: number) =>
+                      Math.round(value) === value ? value.toString() : "",
+                  },
+                  splitNumber: 5,
+                },
+                yAxis: {
+                  name: "单笔均价 (元)",
+                  type: "value",
+                  nameLocation: "middle",
+                  nameGap: 40,
+                  axisLine: { onZero: false },
+                  axisLabel: {
+                    formatter: (value: number) => `¥${Math.round(value)}`,
+                  },
+                  scale: true,
+                },
+                series: [
+                  {
+                    type: "scatter",
+                    data: quadrantData.map((item) => ({
+                      name: item.name,
+                      value: [item.frequency, item.avgAmount, item.totalAmount],
+                      symbolSize: Math.max(
+                        10,
+                        Math.min(Math.log(item.totalAmount) * 5, 60),
+                      ),
+                      category: item.category,
+                      frequency: item.frequency,
+                      avgAmount: item.avgAmount,
+                      totalAmount: item.totalAmount,
+                    })),
+                    symbolSize: (data: any) => {
+                      const size = Math.max(
+                        10,
+                        Math.min(Math.log(data[2]) * 5, 60),
+                      );
+                      return size;
+                    },
+                    itemStyle: {
+                      color: (params: any) =>
+                        getCategoryColor(params.data.category),
+                      shadowBlur: 10,
+                      shadowColor: "rgba(0, 0, 0, 0.2)",
+                    },
+                    emphasis: {
+                      scale: 1.2,
+                    },
+                    markLine: {
+                      silent: true,
+                      symbol: "none",
+                      lineStyle: {
+                        color: "#999",
+                        type: "solid",
+                        width: 1,
+                      },
+                      data: [
+                        { xAxis: avgFreq, name: "平均频次" },
+                        { yAxis: avgAmount, name: "平均均价" },
+                      ],
+                    },
+                  },
+                ],
+              }}
+              style={{ width: "100%", height: "600px" }}
+            />
           </div>
         </CardContent>
       </Card>
@@ -828,85 +986,121 @@ export default function InsightsPage({
         </CardHeader>
         <CardContent>
           <div className="h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={paretoData?.categories.map((category, i) => ({
-                  category,
-                  amount: paretoData?.values[i] || 0,
-                  percentage: paretoData?.percentages[i] || 0,
-                }))}
-                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="category"
-                  angle={-45}
-                  textAnchor="end"
-                  height={60}
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis
-                  yAxisId="left"
-                  orientation="left"
-                  stroke="#8884d8"
-                  label={{
-                    value: "金额 (¥)",
-                    angle: -90,
-                    position: "insideLeft",
-                    offset: -10,
-                  }}
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  stroke="#82ca9d"
-                  domain={[0, 100]}
-                  label={{
-                    value: "累积百分比 (%)",
-                    angle: 90,
-                    position: "insideRight",
-                    offset: -10,
-                  }}
-                />
-                <Tooltip
-                  formatter={(value: number, name: string) => {
-                    if (name === "金额")
-                      return [`¥${value.toLocaleString()}`, name];
-                    if (name === "累积百分比")
-                      return [`${value.toFixed(2)}%`, name];
-                    return [value, name];
-                  }}
-                />
-                <Legend />
-                <Bar
-                  yAxisId="left"
-                  dataKey="amount"
-                  name="金额"
-                  fill="#8884d8"
-                  barSize={20}
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="percentage"
-                  name="累积百分比"
-                  stroke="#82ca9d"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <ReferenceLine
-                  yAxisId="right"
-                  y={80}
-                  stroke="red"
-                  strokeDasharray="3 3"
-                  label={{
-                    value: "80%",
-                    position: "right",
-                    fill: "red",
-                  }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
+            <EchartComponent
+              option={{
+                tooltip: {
+                  trigger: "axis",
+                  axisPointer: {
+                    type: "cross",
+                    crossStyle: {
+                      color: "#999",
+                    },
+                  },
+                  formatter: (params: any) => {
+                    const amount = params[0].value;
+                    const percentage = params[1]?.value || 0;
+                    return `
+          <div style="font-weight:bold;margin-bottom:5px;">${params[0].name}</div>
+          金额：¥${formatMoney(amount)}<br/>
+          累积占比：${percentage.toFixed(2)}%
+        `;
+                  },
+                },
+                grid: {
+                  right: "10%",
+                  left: "5%",
+                  bottom: "10%",
+                  top: "15%",
+                  containLabel: true,
+                },
+                legend: {
+                  data: ["消费金额", "累积占比"],
+                  top: 0,
+                },
+                xAxis: {
+                  type: "category",
+                  data: paretoData?.categories || [],
+                  axisPointer: {
+                    type: "shadow",
+                  },
+                  axisLabel: {
+                    interval: 0,
+                    rotate: -45,
+                    fontSize: 12,
+                    margin: 20,
+                    width: 80,
+                    overflow: "truncate",
+                  },
+                },
+                yAxis: [
+                  {
+                    type: "value",
+                    name: "金额 (¥)",
+                    axisLabel: {
+                      formatter: (value: number) => value.toLocaleString(),
+                    },
+                  },
+                  {
+                    type: "value",
+                    name: "累积占比 (%)",
+                    min: 0,
+                    max: 100,
+                    interval: 20,
+                    axisLabel: {
+                      formatter: "{value}%",
+                    },
+                  },
+                ],
+                series: [
+                  {
+                    name: "消费金额",
+                    type: "bar",
+                    data:
+                      paretoData?.values.map((value, index) => ({
+                        value,
+                        itemStyle: {
+                          color: getCategoryColor(
+                            paretoData?.categories[index] || "",
+                          ),
+                        },
+                      })) || [],
+                    barMaxWidth: 40,
+                  },
+                  {
+                    name: "累积占比",
+                    type: "line",
+                    yAxisIndex: 1,
+                    data: paretoData?.percentages || [],
+                    itemStyle: {
+                      color: "#5470c6",
+                    },
+                    markLine: {
+                      silent: true,
+                      symbol: "none",
+                      lineStyle: {
+                        color: "#ee6666",
+                        type: "dashed",
+                        width: 2,
+                      },
+                      label: {
+                        position: "end",
+                        formatter: "80%",
+                        color: "#ee6666",
+                      },
+                      data: [
+                        {
+                          yAxis: 80,
+                          lineStyle: {
+                            color: "#ee6666",
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              }}
+              style={{ width: "100%", height: "100%" }}
+            />
           </div>
         </CardContent>
       </Card>
@@ -932,7 +1126,20 @@ export default function InsightsPage({
         {/* 消费分布云图 */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>消费分布云图</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              消费分布云图
+              <div className="ml-1 group relative">
+                <span className="text-xs text-gray-400 cursor-help">ⓘ</span>
+                <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 text-xs text-gray-700 bg-white rounded shadow-lg border border-gray-200 z-10">
+                  <p>
+                    <strong>如何解读：</strong>
+                    <br />
+                    展示了消费金额的统计分布。 • 灰色框：50% 的核心消费区间
+                    <br />• 孤点：在大额消费
+                  </p>
+                </div>
+              </div>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <ConsumptionDistributionChart
