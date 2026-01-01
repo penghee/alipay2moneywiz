@@ -3,7 +3,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { apiClient } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, TrendingUp, BarChart3, Table2, User } from "lucide-react";
+import {
+  ArrowLeft,
+  TrendingUp,
+  BarChart3,
+  Table2,
+  User,
+  Filter,
+} from "lucide-react";
 import ownersData from "@/config/bill_owners.json";
 import {
   LineChart,
@@ -18,7 +25,10 @@ import {
   Bar,
 } from "recharts";
 import { formatDate } from "date-fns";
-import { CategoryYearlyStats } from "@/types/api";
+import { CategoryYearlyStats, Expense } from "@/types/api";
+import { formatMoney } from "@/lib/utils";
+import PreviewDialog from "@/components/ui/Dialog";
+import ExpensePreview from "@/components/ExpensesPreview";
 
 // 固定分类
 const FIXED_CATEGORIES = ["住房", "交通", "医疗"];
@@ -36,6 +46,10 @@ export default function CategoryPage({
   );
   const [topExpensesLimit, setTopExpensesLimit] = useState<number>(20);
   const [selectedOwner, setSelectedOwner] = useState<string>("all");
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewExpenses, setPreviewExpenses] = useState<Expense[]>([]);
+  const [selectedFilterUnexpected, setSelectedFilterUnexpected] =
+    useState<string>("all");
   const router = useRouter();
 
   const owners = useMemo(
@@ -60,6 +74,7 @@ export default function CategoryPage({
         const data = await apiClient.getCategoryStats(
           yearNum,
           selectedOwner !== "all" ? selectedOwner : undefined,
+          selectedFilterUnexpected !== "all",
         );
         setStats(data);
         // 默认选择前5个分类
@@ -72,14 +87,13 @@ export default function CategoryPage({
     };
 
     fetchData();
-  }, [params, selectedOwner]);
+  }, [params, selectedOwner, selectedFilterUnexpected]);
 
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat("zh-CN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(Math.abs(amount));
-  };
+  const fitleredExpenses = useMemo(() => {
+    if (!stats) return [];
+    if (!topExpensesLimit) return stats.topExpenses;
+    return stats.topExpenses.slice(0, topExpensesLimit);
+  }, [stats, topExpensesLimit]);
 
   const toggleCategory = (category: string) => {
     const newSelected = new Set(selectedCategories);
@@ -126,17 +140,19 @@ export default function CategoryPage({
   }
 
   interface MonthlyTableRow {
-    month: number;
-    [key: string]: number;
+    month: string;
+    [key: string]: string | number;
     total: number;
   }
 
   // 准备趋势图数据
-  const allMonths = new Set<number>();
+  const allMonths = new Set<string>();
   Object.values(stats.monthlyData).forEach((data) => {
     data.forEach((item) => allMonths.add(item.month));
   });
-  const sortedMonths = Array.from(allMonths).sort((a, b) => a - b);
+  const sortedMonths = Array.from(allMonths).sort(
+    (a, b) => Number(a) - Number(b),
+  );
 
   const trendData = sortedMonths.map((month) => {
     const dataPoint: TrendDataPoint = { month: `${month}月` };
@@ -257,7 +273,7 @@ export default function CategoryPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -286,6 +302,17 @@ export default function CategoryPage({
                     {owner.name}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div className="flex items-center space-x-2 ml-4">
+              <Filter className="h-5 w-5 text-gray-500" />
+              <select
+                value={selectedFilterUnexpected}
+                onChange={(e) => setSelectedFilterUnexpected(e.target.value)}
+                className="w-32 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">不过滤</option>
+                <option value="unexpected">过滤预算外</option>
               </select>
             </div>
           </div>
@@ -481,7 +508,9 @@ export default function CategoryPage({
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
               <Table2 className="h-5 w-5 mr-2" />
-              单笔支出TOP {topExpensesLimit}
+              {topExpensesLimit === -1
+                ? `全部支出${stats.topExpenses.length}条`
+                : `单笔支出TOP ${topExpensesLimit}`}
             </h3>
             <div className="flex items-center">
               <label
@@ -496,6 +525,7 @@ export default function CategoryPage({
                 onChange={(e) => setTopExpensesLimit(Number(e.target.value))}
                 className="block w-24 rounded-md border-gray-300 py-1 pl-2 pr-8 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
               >
+                <option value={-1}>全部</option>
                 <option value={20}>20 条</option>
                 <option value={50}>50 条</option>
                 <option value={100}>100 条</option>
@@ -521,41 +551,40 @@ export default function CategoryPage({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {stats.topExpenses
-                  .slice(0, topExpensesLimit)
-                  .map((expense, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(expense.date, "yyyy-MM-dd")}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div
-                            className="w-3 h-3 rounded-full mr-2"
-                            style={{
-                              backgroundColor:
-                                COLORS[
-                                  stats.categories.indexOf(expense.category) %
-                                    COLORS.length
-                                ] || "#9CA3AF",
-                            }}
-                          ></div>
-                          <span className="text-sm text-gray-900">
-                            {expense.category}
-                          </span>
-                        </div>
-                      </td>
-                      <td
-                        className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate"
-                        title={expense.description}
-                      >
-                        {expense.description}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
-                        ¥{formatMoney(expense.amount)}
-                      </td>
-                    </tr>
-                  ))}
+                {fitleredExpenses.map((expense, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatDate(expense.date, "yyyy-MM-dd")}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div
+                          className="w-3 h-3 rounded-full mr-2"
+                          style={{
+                            backgroundColor:
+                              COLORS[
+                                stats.categories.indexOf(expense.category) %
+                                  COLORS.length
+                              ] || "#9CA3AF",
+                          }}
+                        ></div>
+                        <span className="text-sm text-gray-900">
+                          {expense.category}
+                        </span>
+                      </div>
+                    </td>
+                    <td
+                      className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate"
+                      title={expense.description}
+                    >
+                      {expense.description}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
+                      ¥{formatMoney(expense.amount)}{" "}
+                      {expense.isRefund ? "(退款)" : ""}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -586,6 +615,9 @@ export default function CategoryPage({
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     月均
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    操作
                   </th>
                 </tr>
               </thead>
@@ -626,6 +658,17 @@ export default function CategoryPage({
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         ¥{formatMoney(avgPerMonth)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <button
+                          onClick={() => {
+                            setPreviewExpenses(categoryData.expenses);
+                            setOpenPreview(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          查看
+                        </button>
                       </td>
                     </tr>
                   );
@@ -681,8 +724,8 @@ export default function CategoryPage({
                         key={category}
                         className="px-4 py-3 whitespace-nowrap text-sm text-gray-900"
                       >
-                        {row[category] > 0
-                          ? `¥${formatMoney(row[category])}`
+                        {Number(row[category]) > 0
+                          ? `¥${formatMoney(Number(row[category]))}`
                           : "-"}
                       </td>
                     ))}
@@ -711,6 +754,13 @@ export default function CategoryPage({
             </table>
           </div>
         </div>
+        <PreviewDialog
+          open={openPreview}
+          onOpenChange={setOpenPreview}
+          title="交易预览"
+        >
+          <ExpensePreview expenses={previewExpenses} />
+        </PreviewDialog>
       </div>
     </div>
   );

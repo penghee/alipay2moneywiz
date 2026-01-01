@@ -46,7 +46,7 @@ export interface YearlyStats {
   totalIncome: number;
   totalExpense: number;
   totalBalance: number;
-  categoryStats?: Record<string, { amount: number; count: number }>;
+  categoryStats?: Record<string, CategoryStats>;
   monthlyData: Array<{
     month: number;
     income: number;
@@ -54,8 +54,14 @@ export interface YearlyStats {
     balance: number;
     totalIncome?: number;
     totalExpense?: number;
+    salary?: number;
   }>;
   expenses?: Expense[];
+  totalSalary?: number;
+  sankeyData?: {
+    nodes: Array<{ name: string }>;
+    links: Array<{ source: number; target: number; value: number }>;
+  };
 }
 
 export interface MonthlyCategoryStats {
@@ -63,19 +69,10 @@ export interface MonthlyCategoryStats {
   count: number;
 }
 
-export interface MonthlyStats {
-  income: number;
-  expense: number;
-  balance: number;
-  expenses: Expense[];
-  salary: Expense[];
-  categoryStats: Record<string, MonthlyCategoryStats>;
-  totalTransactions: number;
-}
-
 export interface CategoryStats {
   amount: number;
   count: number;
+  expenses: Expense[];
 }
 
 export interface MonthlyStats {
@@ -83,9 +80,13 @@ export interface MonthlyStats {
   expense: number;
   balance: number;
   expenses: Expense[];
-  salary: Expense[];
   categoryStats: Record<string, CategoryStats>;
   totalTransactions: number;
+  totalSalary: number;
+  sankeyData?: {
+    nodes: Array<{ name: string }>;
+    links: Array<{ source: number; target: number; value: number }>;
+  };
 }
 
 export interface Expense {
@@ -95,19 +96,19 @@ export interface Expense {
   date: string;
   description: string;
   tags: string;
+  remark?: string;
+  isRefund?: boolean;
+  owner?: string;
+  merchant: string;
+  source: string;
+  account: string;
 }
 
 export interface CategoryMonthlyData {
-  month: number;
+  month: string;
   amount: number;
   count: number;
-}
-
-export interface TopExpense {
-  date: string;
-  category: string;
-  amount: number;
-  description: string;
+  isRefund: boolean;
 }
 
 export interface CategoryYearlyStats {
@@ -115,7 +116,8 @@ export interface CategoryYearlyStats {
   monthlyData: Record<string, CategoryMonthlyData[]>;
   totalByCategory: Record<string, CategoryStats>;
   totalExpense: number;
-  topExpenses: TopExpense[];
+  topExpenses: Expense[];
+  allExpenses: Expense[];
 }
 
 export interface Summary {
@@ -153,10 +155,7 @@ export interface UploadResponse {
   success: boolean;
   message: string;
   count: number;
-  errors?: Array<{
-    row: number;
-    message: string;
-  }>;
+  error?: string;
 }
 
 export interface YearsResponse {
@@ -167,3 +166,28 @@ export interface MonthsResponse {
   year: number;
   months: number[];
 }
+
+export interface TransactionPreview {
+  日期: string;
+  描述: string;
+  账户: string;
+  交易对方: string;
+  分类: string;
+  转账: string;
+  金额: string;
+  标签: string;
+  备注: string;
+  账单人: string;
+}
+
+export interface PreviewUploadResponse {
+  success: boolean;
+  error?: string;
+  preview?: boolean;
+  total?: number;
+  platform?: string;
+  owner?: string;
+  transactions?: TransactionPreview[];
+}
+import type { InsightsData } from "@/lib/insights";
+export type InsightsResponse = InsightsData;

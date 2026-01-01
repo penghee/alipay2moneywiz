@@ -10,8 +10,18 @@ import {
   AlertCircle,
   FileText,
   Calendar,
+  Eye,
+  Brain,
+  Loader2,
 } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
+import PreviewDialog from "@/components/PreviewDialog";
+import { Button } from "@/components/ui/button";
+import {
+  Transaction,
+  TransactionPreview,
+  PreviewUploadResponse,
+} from "@/types/api";
 
 interface BillOwner {
   id: string;
@@ -34,6 +44,15 @@ export default function ImportPage() {
     defaultOwner: "爸爸",
     owners: [],
   });
+  const [previewMode, setPreviewMode] = useState(true);
+  const [previewData, setPreviewData] = useState<PreviewUploadResponse | null>(
+    null,
+  );
+  const [smartCategory, setSmartCategory] = useState(true);
+  const [editableTransactions, setEditableTransactions] = useState<
+    TransactionPreview[]
+  >([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     // Load bill owners data
@@ -61,6 +80,7 @@ export default function ImportPage() {
 
     loadBillOwners();
   }, []);
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,18 +90,45 @@ export default function ImportPage() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setPreviewData(null);
 
     try {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("platform", platform);
       formData.append("owner", owner);
+      formData.append("smartCategory", smartCategory.toString());
 
-      try {
-        const data = await apiClient.uploadFile(formData);
-        setResult(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "上传失败");
+      if (previewMode) {
+        // In preview mode, get the preview data first
+        try {
+          const previewResponse = await apiClient.uploadFilePreview(formData);
+          if (previewResponse.transactions) {
+            // Create a preview result that matches the expected type
+            const previewResult: PreviewUploadResponse = {
+              success: true,
+              transactions: previewResponse.transactions,
+              preview: true,
+              total: previewResponse.transactions.length,
+              platform,
+              owner,
+            };
+            setPreviewData(previewResult);
+            setEditableTransactions([...previewResponse.transactions]);
+          } else {
+            throw new Error("No transactions found in preview");
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "预览失败");
+        }
+      } else {
+        // Direct upload without preview
+        try {
+          const data = await apiClient.uploadFile(formData);
+          setResult(data);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "上传失败");
+        }
       }
     } catch (err) {
       setError("网络错误，请重试");
@@ -89,6 +136,50 @@ export default function ImportPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSaveTransactions = async () => {
+    if (!previewData) return;
+
+    setIsSaving(true);
+    try {
+      await apiClient.uploadFileSave({
+        transactions: editableTransactions,
+        platform: previewData.platform || "alipay",
+        owner: previewData.owner || "爸爸",
+      });
+
+      setResult({
+        success: true,
+        message: "交易记录保存成功",
+        count: editableTransactions.length,
+      });
+      setPreviewData(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存失败");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleTransactionUpdate = (
+    index: number,
+    field: keyof TransactionPreview,
+    value: string,
+  ) => {
+    setEditableTransactions((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleDelete = (index: number) => {
+    setEditableTransactions((prev) => {
+      const updated = [...prev];
+      updated.splice(index, 1);
+      return updated;
+    });
   };
 
   const handleViewStats = () => {
@@ -104,7 +195,7 @@ export default function ImportPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -177,7 +268,48 @@ export default function ImportPage() {
           </div>
         )}
 
-        {/* 文件上传组件 */}
+        {/* Preview Toggle */}
+        <div className="mb-6 bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center space-x-2 mb-4">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={previewMode}
+                onChange={(e) => setPreviewMode(e.target.checked)}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+            <label htmlFor="preview-mode" className="flex items-center text-sm">
+              <Eye className="h-4 w-4 mr-1" />
+              启用预览模式
+            </label>
+            <span className="text-sm text-gray-500">
+              {previewMode ? "上传前预览并编辑交易记录" : "直接上传交易记录"}
+            </span>
+          </div>
+          {/* 启用智能分类 */}
+          <div className="flex items-center space-x-2">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={smartCategory}
+                onChange={(e) => setSmartCategory(e.target.checked)}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+            <label
+              htmlFor="smart-category"
+              className="flex items-center text-sm"
+            >
+              <Brain className="h-4 w-4 mr-1" />
+              启用智能分类
+            </label>
+          </div>
+        </div>
+
+        {/* File Upload Component */}
         <FileUpload
           onUpload={handleUpload}
           loading={loading}
@@ -185,7 +317,21 @@ export default function ImportPage() {
           defaultOwner={billOwners.defaultOwner}
         />
 
-        {/* 导入历史 */}
+        {/* Preview Dialog */}
+        {previewData && (
+          <PreviewDialog
+            open={!!previewData}
+            onOpenChange={(open) => !open && setPreviewData(null)}
+            previewData={previewData}
+            onSave={handleSaveTransactions}
+            isSaving={isSaving}
+            editableTransactions={editableTransactions}
+            onTransactionUpdate={handleTransactionUpdate}
+            onDelete={handleDelete}
+          />
+        )}
+
+        {/* 导入说明 */}
         <div className="mt-8 bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <FileText className="h-5 w-5 mr-2" />

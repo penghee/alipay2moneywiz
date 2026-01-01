@@ -31,7 +31,12 @@ import dynamic from "next/dynamic";
 import ExpenseByWeekday from "@/components/ExpenseByWeekday";
 import ExpenseBreakdown from "@/components/ExpenseBreakdown";
 import TagBreakdown from "@/components/TaggedExpenseBreakdown";
-import { MonthlyStats } from "@/types/api";
+import { Expense, MonthlyStats } from "@/types/api";
+import { formatMoney } from "@/lib/utils";
+import SankeyChart from "@/components/charts/SankeyChart";
+import PreviewDialog from "@/components/ui/Dialog";
+import ExpensePreview from "@/components/ExpensesPreview";
+
 // Dynamically import client-side components
 const ThresholdSlider = dynamic(() => import("@/components/ThresholdSlider"), {
   ssr: false,
@@ -59,7 +64,8 @@ export default function MonthPage({
     Record<string, CategoryStats>
   >({});
   const [selectedOwner, setSelectedOwner] = useState<string>("all");
-
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewExpenses, setPreviewExpenses] = useState<Expense[]>([]);
   const router = useRouter();
 
   const owners = useMemo(
@@ -139,12 +145,13 @@ export default function MonthPage({
     fetchData();
   }, [params, selectedOwner]);
 
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat("zh-CN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
+  const fitleredExpenses = useMemo(() => {
+    if (!stats) return [];
+    if (!topExpensesLimit) return stats.expenses;
+    return [...stats.expenses]
+      .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+      .slice(0, topExpensesLimit);
+  }, [stats, topExpensesLimit]);
 
   if (loading) {
     return (
@@ -206,7 +213,7 @@ export default function MonthPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -247,6 +254,9 @@ export default function MonthPage({
                 <p className="text-sm font-medium text-gray-600">收入</p>
                 <p className="text-2xl font-bold text-green-600">
                   ¥{formatMoney(stats.income)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  (工资: ¥{formatMoney(stats.totalSalary)})
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-green-600" />
@@ -386,12 +396,25 @@ export default function MonthPage({
           </div>
         </div>
 
+        {/* Sankey Chart */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <BarChart3 className="h-5 w-5 mr-2" />
+            月度支出流向
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <SankeyChart data={stats.sankeyData} />
+          </ResponsiveContainer>
+        </div>
+
         {/* Top Expenses Table */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
               <Filter className="h-5 w-5 mr-2" />
-              单笔支出TOP {topExpensesLimit}
+              {topExpensesLimit === -1
+                ? `全部支出${stats.expenses.length}条`
+                : `单笔支出TOP ${topExpensesLimit}`}
             </h3>
             <div className="flex items-center">
               <label
@@ -406,6 +429,7 @@ export default function MonthPage({
                 onChange={(e) => setTopExpensesLimit(Number(e.target.value))}
                 className="block w-24 rounded-md border-gray-300 py-1 pl-2 pr-8 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
               >
+                <option value={-1}>全部</option>
                 <option value={20}>20 条</option>
                 <option value={50}>50 条</option>
                 <option value={100}>100 条</option>
@@ -433,39 +457,37 @@ export default function MonthPage({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {[...stats.expenses]
-                    .sort((a, b) => b.amount - a.amount)
-                    .slice(0, topExpensesLimit)
-                    .map((expense, index) => (
-                      <tr key={expense.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {expense.date}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div
-                              className="w-3 h-3 rounded-full mr-2"
-                              style={{
-                                backgroundColor:
-                                  COLORS[index % COLORS.length] || "#9CA3AF",
-                              }}
-                            ></div>
-                            <span className="text-sm text-gray-900">
-                              {expense.category}
-                            </span>
-                          </div>
-                        </td>
-                        <td
-                          className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate"
-                          title={expense.description}
-                        >
-                          {expense.description}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
-                          ¥{formatMoney(expense.amount)}
-                        </td>
-                      </tr>
-                    ))}
+                  {fitleredExpenses.map((expense, index) => (
+                    <tr key={expense.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {expense.date}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div
+                            className="w-3 h-3 rounded-full mr-2"
+                            style={{
+                              backgroundColor:
+                                COLORS[index % COLORS.length] || "#9CA3AF",
+                            }}
+                          ></div>
+                          <span className="text-sm text-gray-900">
+                            {expense.category}
+                          </span>
+                        </div>
+                      </td>
+                      <td
+                        className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate"
+                        title={expense.description}
+                      >
+                        {expense.description}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
+                        ¥{formatMoney(expense.amount)}{" "}
+                        {expense.isRefund ? "(退款)" : ""}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -557,6 +579,9 @@ export default function MonthPage({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     同比去年
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -616,6 +641,21 @@ export default function MonthPage({
                         "N/A"
                       )}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => {
+                          setPreviewExpenses(
+                            stats.expenses.filter(
+                              (expense) => expense.category === item.name,
+                            ),
+                          );
+                          setOpenPreview(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        查看
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -623,6 +663,13 @@ export default function MonthPage({
           </div>
         </div>
       </div>
+      <PreviewDialog
+        open={openPreview}
+        onOpenChange={setOpenPreview}
+        title="交易预览"
+      >
+        <ExpensePreview expenses={previewExpenses} />
+      </PreviewDialog>
     </div>
   );
 }

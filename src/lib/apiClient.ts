@@ -10,6 +10,9 @@ import type {
   YearsResponse,
   MonthsResponse,
   CategoryYearlyStats,
+  PreviewUploadResponse,
+  TransactionPreview,
+  InsightsResponse,
 } from "@/types/api";
 import type { Asset, AssetSummary } from "@/types/asset";
 
@@ -212,10 +215,18 @@ export class ApiClient {
   async getCategoryStats(
     year: number,
     owner?: string,
+    filterUnexpected?: boolean,
   ): Promise<CategoryYearlyStats> {
+    const searchParams = new URLSearchParams();
+    if (owner && owner !== "all") {
+      searchParams.append("owner", owner);
+    }
+    if (filterUnexpected) {
+      searchParams.append("filterUnexpected", "true");
+    }
     const url =
       `/api/stats/category/${year}` +
-      (owner ? `?owner=${encodeURIComponent(owner)}` : "");
+      (searchParams.toString() ? `?${searchParams.toString()}` : "");
     return this.request<CategoryYearlyStats>(url);
   }
 
@@ -249,6 +260,47 @@ export class ApiClient {
     return response.json() as Promise<UploadResponse>;
   }
 
+  // ========== Upload Preview ==========
+  async uploadFilePreview(formData: FormData): Promise<PreviewUploadResponse> {
+    const response = await fetch("/api/upload/preview", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: response.statusText,
+      }));
+      throw new Error(error.message || "File upload preview failed");
+    }
+
+    return response.json() as Promise<PreviewUploadResponse>;
+  }
+
+  // ========== Upload Save ==========
+  async uploadFileSave(data: {
+    transactions: TransactionPreview[];
+    platform: string;
+    owner: string;
+  }): Promise<UploadResponse> {
+    const response = await fetch("/api/upload/save", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: response.statusText,
+      }));
+      throw new Error(error.message || "File save failed");
+    }
+
+    return response.json() as Promise<UploadResponse>;
+  }
+
   // ========== Years ==========
   async getYears(): Promise<number[]> {
     const result = await this.request<YearsResponse>("/api/years");
@@ -264,6 +316,19 @@ export class ApiClient {
     const url = `/api/years/${year}/months${queryString ? `?${queryString}` : ""}`;
     const result = await this.request<MonthsResponse>(url);
     return result.months;
+  }
+
+  // ========== insights ==========
+  async getInsights(year: number, owner?: string): Promise<InsightsResponse> {
+    const queryParams = new URLSearchParams();
+    queryParams.append("year", year.toString());
+    if (owner && owner !== "all") {
+      queryParams.append("owner", owner);
+    }
+    const queryString = queryParams.toString();
+    const url = `/api/insights?${queryString}`;
+    const result = await this.request<InsightsResponse>(url);
+    return result;
   }
 }
 

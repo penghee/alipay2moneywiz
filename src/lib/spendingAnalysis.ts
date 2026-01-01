@@ -61,8 +61,9 @@ export class SpendingAnalyzer {
     const threshold = this.options.singleTransactionThreshold;
 
     transactions.forEach((transaction) => {
-      const amount = Math.abs(parseFloat(transaction.金额) || 0);
-      if (amount >= threshold) {
+      const amountNum = parseFloat(transaction.金额);
+      const amount = Math.abs(amountNum || 0);
+      if (amountNum < 0 && amount >= threshold) {
         alerts.push({
           type: "high_value",
           message: `单笔大额消费: ${transaction.描述} ${amount.toFixed(2)}元`,

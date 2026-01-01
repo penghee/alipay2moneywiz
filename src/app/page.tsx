@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import { getCategoryColor, resetColorAssignment } from "@/lib/colors";
 import BudgetProgressBar from "@/components/BudgetProgressBar";
 import { apiClient } from "@/lib/apiClient";
+import YearSummaryCards from "@/components/YearSummaryCards";
 
 // Dynamically import the FinancialOverview component with no SSR
 const FinancialOverview = dynamic(
@@ -16,6 +17,8 @@ const FinancialOverview = dynamic(
 );
 
 export default function Home() {
+  // 获取当前年份的预算数据
+  const currentYear = new Date().getFullYear();
   const [years, setYears] = useState<number[]>([]);
   const [budgetProgress, setBudgetProgress] = useState<{
     total: {
@@ -47,8 +50,6 @@ export default function Home() {
         const yearsData = await apiClient.getYears();
         setYears(yearsData);
 
-        // 获取当前年份的预算数据
-        const currentYear = new Date().getFullYear();
         try {
           const budgetData = await apiClient.getBudgetProgress(currentYear);
           setBudgetProgress(budgetData);
@@ -78,7 +79,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -86,11 +87,16 @@ export default function Home() {
           </h1>
           <p className="text-gray-600">查看和管理您的财务数据</p>
         </header>
-
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            {currentYear}年财务概览
+          </h2>
+          <YearSummaryCards year={currentYear} />
+        </div>
         {budgetProgress && (
           <div className="mb-12">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              本年预算概览
+              {currentYear}年预算概览
             </h2>
             <BudgetProgressBar
               budgetProgress={budgetProgress}
@@ -100,6 +106,9 @@ export default function Home() {
         )}
         {/* Financial Overview Section */}
         <section className="mb-12">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">
+            近12个月财务概览
+          </h2>
           <FinancialOverview />
         </section>
 

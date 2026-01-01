@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus, Upload, List, BookOpen, Info } from "lucide-react";
+import { Plus, Upload, List, BookOpen, Info, LineChart } from "lucide-react";
 
 type NavItem = {
   name: string;
@@ -125,6 +125,17 @@ export default function Navigation() {
       textColor: "text-emerald-700",
       iconColor: "text-emerald-500",
       shadow: "shadow-emerald-500/10",
+    },
+    {
+      name: "对比",
+      path: "/compare",
+      icon: <LineChart className="h-4 w-4" />,
+      variant: "secondary",
+      bgColor: "bg-purple-50",
+      hoverBgColor: "hover:bg-purple-100",
+      textColor: "text-purple-700",
+      iconColor: "text-purple-500",
+      shadow: "shadow-purple-500/10",
     },
     {
       name: "分类管理",

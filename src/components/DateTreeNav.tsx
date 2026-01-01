@@ -108,22 +108,47 @@ export default function DateTreeNav() {
               <Link
                 href={`/year/${year}`}
                 className={`block px-4 py-1 hover:bg-gray-700 rounded-md ${
-                  pathname === `/${year}` ? "text-blue-400" : "text-gray-400"
+                  pathname === `/year/${year}`
+                    ? "text-blue-400"
+                    : "text-gray-400"
                 }`}
               >
                 全年流水
+              </Link>
+              {/* 全年分类 */}
+              <Link
+                href={`/year/${year}/category`}
+                className={`block px-4 py-1 hover:bg-gray-700 rounded-md ${
+                  pathname === `/year/${year}/category`
+                    ? "text-blue-400"
+                    : "text-gray-400"
+                }`}
+              >
+                全年分类
               </Link>
               {/* 全年预算 */}
               <Link
                 href={`/year/${year}/budget`}
                 className={`block px-4 py-1 hover:bg-gray-700 rounded-md ${
-                  pathname === `/${year}/budget`
+                  pathname === `/year/${year}/budget`
                     ? "text-blue-400"
                     : "text-gray-400"
                 }`}
               >
                 全年预算
               </Link>
+              {/* 全年洞察 */}
+              <Link
+                href={`/insights/${year}`}
+                className={`block px-4 py-1 hover:bg-gray-700 rounded-md ${
+                  pathname === `/insights/${year}`
+                    ? "text-blue-400"
+                    : "text-gray-400"
+                }`}
+              >
+                全年洞察
+              </Link>
+
               {months.map((month: string | number) => {
                 // Convert month to string and ensure it's 2 digits
                 const monthStr = String(month);

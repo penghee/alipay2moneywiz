@@ -19,7 +19,7 @@ export const COLOR_PALETTE = [
 
   "#60a5fa", // blue-400
   "#34d399", // emerald-400
-  "a78bfa", // violet-400
+  "#a78bfa", // violet-400
   "#f87171", // red-400
   "#fbbf24", // amber-400
   "#22d3ee", // cyan-400
@@ -28,18 +28,12 @@ export const COLOR_PALETTE = [
 
   "#93c5fd", // blue-300
   "#6ee7b7", // emerald-300
-  "#c4b5fd", // violet-300
   "#fca5a5", // red-300
   "#fbbf24", // amber-300
   "#fcd34d", // amber-200
   "#67e8f9", // cyan-300
   "#f9a8d4", // pink-300
   "#fdba74", // orange-300
-
-  // 灰色系
-  "#94a3b8", // slate-400
-  "#cbd5e1", // slate-300
-  "#e2e8f0", // slate-200
 ];
 
 // 存储已分配的颜色
@@ -71,4 +65,25 @@ export function getCategoryColor(category: string): string {
 export function resetColorAssignment(): void {
   Object.keys(assignedColors).forEach((key) => delete assignedColors[key]);
   colorIndex = 0;
+}
+
+import type { QuadrantData } from "@/lib/insights";
+
+export function getQuadrantColor(
+  frequency: number,
+  avgAmount: number,
+  data: QuadrantData[],
+): string {
+  if (data.length === 0) return "#8884d8";
+
+  const maxFreq = Math.max(...data.map((d) => d.frequency));
+  const maxAvg = Math.max(...data.map((d) => d.avgAmount));
+
+  const isHighFreq = frequency > maxFreq / 2;
+  const isHighAvg = avgAmount > maxAvg / 2;
+
+  if (isHighFreq && isHighAvg) return "#ff7f0e"; // Orange - High frequency, high amount
+  if (!isHighFreq && isHighAvg) return "#d62728"; // Red - Low frequency, high amount
+  if (isHighFreq && !isHighAvg) return "#2ca02c"; // Green - High frequency, low amount
+  return "#1f77b4"; // Blue - Low frequency, low amount
 }
