@@ -13,6 +13,10 @@ import {
   Filter,
   User,
   Tag,
+  FileText,
+  AlertCircle,
+  CheckCircle,
+  CreditCard,
 } from "lucide-react";
 import ownersData from "@/config/bill_owners.json";
 import {
@@ -31,7 +35,7 @@ import dynamic from "next/dynamic";
 import ExpenseByWeekday from "@/components/ExpenseByWeekday";
 import ExpenseBreakdown from "@/components/ExpenseBreakdown";
 import TagBreakdown from "@/components/TaggedExpenseBreakdown";
-import { Expense, MonthlyStats } from "@/types/api";
+import { Expense, MonthlyStats, MonthlyReport } from "@/types/api";
 import { formatMoney } from "@/lib/utils";
 import SankeyChart from "@/components/charts/SankeyChart";
 import PreviewDialog from "@/components/ui/Dialog";
@@ -66,12 +70,40 @@ export default function MonthPage({
   const [selectedOwner, setSelectedOwner] = useState<string>("all");
   const [openPreview, setOpenPreview] = useState(false);
   const [previewExpenses, setPreviewExpenses] = useState<Expense[]>([]);
+  const [monthlyReport, setMonthlyReport] = useState<MonthlyReport | null>(
+    null,
+  );
+  const [reportLoading, setReportLoading] = useState(false);
   const router = useRouter();
 
   const owners = useMemo(
     () => [{ id: "all", name: "全部" }, ...ownersData.owners],
     [],
   );
+
+  // 加载月度报告
+  useEffect(() => {
+    if (!year || !month) return;
+
+    const fetchReport = async () => {
+      setReportLoading(true);
+      try {
+        const response = await fetch(
+          `/api/financials/monthly-report/${year}/${month}`,
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setMonthlyReport(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch monthly report:", error);
+      } finally {
+        setReportLoading(false);
+      }
+    };
+
+    fetchReport();
+  }, [year, month]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -327,6 +359,199 @@ export default function MonthPage({
               <BarChart3 className="h-8 w-8 text-gray-600" />
             </div>
           </div>
+        </div>
+
+        {/* Monthly Report Section */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <FileText className="h-5 w-5 mr-2" />
+              月度财务报告
+            </h3>
+          </div>
+
+          {reportLoading ? (
+            <div className="text-center py-8 text-gray-500">加载报告中...</div>
+          ) : monthlyReport ? (
+            <div className="space-y-6">
+              {/* Overall Score */}
+              <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">月度评分</p>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {monthlyReport.overallScore}/100
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600 mb-1">月度结余</p>
+                  <p
+                    className={`text-2xl font-bold ${
+                      monthlyReport.balance >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {formatMoney(monthlyReport.balance)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-xs text-gray-600">总资产变化</p>
+                  <p
+                    className={`text-lg font-semibold ${
+                      monthlyReport.balance >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {formatMoney(monthlyReport.balance)}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-xs text-gray-600">储蓄率</p>
+                  <p
+                    className={`text-lg font-semibold ${
+                      monthlyReport.savingsRate >= 20
+                        ? "text-green-600"
+                        : monthlyReport.savingsRate >= 10
+                          ? "text-yellow-600"
+                          : "text-red-600"
+                    }`}
+                  >
+                    {monthlyReport.savingsRate.toFixed(1)}%
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-xs text-gray-600">大额支出</p>
+                  <p
+                    className={`text-lg font-semibold ${
+                      monthlyReport.largeExpenseCount > 0
+                        ? "text-orange-600"
+                        : "text-green-600"
+                    }`}
+                  >
+                    {monthlyReport.largeExpenseCount} 笔
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-xs text-gray-600">最大支出分类</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {monthlyReport.topCategory?.category || "无"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Suggestions */}
+              {monthlyReport.suggestions.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-2 text-blue-600" />
+                    财务建议
+                  </h4>
+                  <ul className="space-y-2">
+                    {monthlyReport.suggestions.map((suggestion, index) => (
+                      <li
+                        key={index}
+                        className="flex items-start text-sm text-gray-700"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>{suggestion}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Large Expenses */}
+              {monthlyReport.largeExpenseCount > 0 && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <CreditCard className="h-4 w-4 mr-2 text-purple-600" />
+                    大额支出详情
+                    <span className="ml-2 text-sm text-gray-500">
+                      （总额: ¥{formatMoney(monthlyReport.largeExpenseTotal)}）
+                    </span>
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                            日期
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                            描述
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                            分类
+                          </th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                            金额
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {monthlyReport.largeExpenses
+                          .slice(0, 10)
+                          .map((expense) => (
+                            <tr key={expense.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-2 text-sm text-gray-900">
+                                {expense.date}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-900 max-w-xs truncate">
+                                {expense.description}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-900">
+                                {expense.category}
+                              </td>
+                              <td className="px-4 py-2 text-sm font-medium text-red-600 text-right">
+                                -¥{formatMoney(expense.amount)}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Summary */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-blue-900 mb-2">月度摘要</h4>
+                <p className="text-sm text-blue-800">
+                  本月总收入{" "}
+                  <strong>¥{formatMoney(monthlyReport.totalIncome)}</strong>，
+                  总支出{" "}
+                  <strong
+                    className={
+                      monthlyReport.totalExpense <=
+                      monthlyReport.totalIncome * 0.7
+                        ? "text-green-700"
+                        : "text-orange-700"
+                    }
+                  >
+                    ¥{formatMoney(monthlyReport.totalExpense)}
+                  </strong>
+                  ， 结余{" "}
+                  <strong
+                    className={
+                      monthlyReport.balance >= 0
+                        ? "text-green-700"
+                        : "text-red-700"
+                    }
+                  >
+                    ¥{formatMoney(monthlyReport.balance)}
+                  </strong>
+                  。
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">暂无报告数据</div>
+          )}
         </div>
 
         {/* Charts */}
@@ -663,6 +888,7 @@ export default function MonthPage({
           </div>
         </div>
       </div>
+      {/* Preview Dialog */}
       <PreviewDialog
         open={openPreview}
         onOpenChange={setOpenPreview}

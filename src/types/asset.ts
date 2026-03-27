@@ -60,3 +60,40 @@ export const ASSET_CATEGORIES = {
     "其他",
   ],
 } as const;
+
+// 资产快照相关类型
+export interface AssetSnapshot {
+  id: string;
+  date: string; // YYYY-MM-DD 快照日期
+  snapshotDate: string; // YYYY-MM-DD HH:mm:ss 创建时间
+  note?: string; // 备注
+  assets: SnapshotItem[];
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+}
+
+export interface SnapshotItem {
+  type: "活期" | "投资" | "固定资产" | "应收" | "负债";
+  category: string;
+  subcategory: string;
+  name: string;
+  account: string;
+  amount: number;
+  owner: string;
+}
+
+// 快照对比结果
+export interface SnapshotComparison {
+  previousSnapshot?: AssetSnapshot;
+  currentSnapshot: AssetSnapshot;
+  netWorthChange: number;
+  netWorthChangePercent: number;
+  assetChanges: Array<{
+    name: string;
+    previousAmount: number;
+    currentAmount: number;
+    change: number;
+    changePercent: number;
+  }>;
+}

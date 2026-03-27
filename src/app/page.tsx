@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, TrendingUp, DollarSign } from "lucide-react";
+import {
+  Calendar,
+  TrendingUp,
+  DollarSign,
+  Camera,
+  FileText,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 
 import { getCategoryColor, resetColorAssignment } from "@/lib/colors";
@@ -174,6 +180,18 @@ export default function Home() {
                           <Calendar className="h-4 w-4 text-purple-500" />
                         </div>
                         <span className="text-sm text-gray-600">分类明细</span>
+                      </div>
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/snapshots`);
+                        }}
+                        className="flex items-center space-x-2.5 p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                      >
+                        <div className="p-1.5 bg-green-50 rounded-lg">
+                          <Camera className="h-4 w-4 text-green-500" />
+                        </div>
+                        <span className="text-sm text-gray-600">资产快照</span>
                       </div>
                     </div>
 

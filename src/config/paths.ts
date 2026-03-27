@@ -1,5 +1,5 @@
-import path from 'path';
-import fs from 'fs';
+import path from "path";
+import fs from "fs";
 
 // 项目根目录（app 目录的父目录）
 const PROJECT_ROOT = path.join(process.cwd());
@@ -23,7 +23,7 @@ export function getDataDirectory(): string {
   }
 
   // 默认路径
-  return path.join(PROJECT_ROOT, 'data');
+  return path.join(PROJECT_ROOT, "data");
 }
 
 /**
@@ -37,7 +37,7 @@ export function getYearDataDirectory(year: number | string): string {
  * 获取配置文件目录
  */
 export function getConfigDirectory(): string {
-  return path.join(process.cwd(), 'src', 'config');
+  return path.join(process.cwd(), "src", "config");
 }
 
 /**
@@ -61,51 +61,51 @@ export function ensureDirectoryExists(dirPath: string): void {
  */
 export const DATA_PATHS = {
   // 账单所有者配置
-  billOwners: () => path.join(getConfigDirectory(), 'bill_owners.json'),
+  billOwners: () => path.join(getConfigDirectory(), "bill_owners.json"),
   // 项目根目录
   projectRoot: PROJECT_ROOT,
-  
+
   // 获取数据根目录
   root: getDataDirectory,
-  
+
   // 获取年份目录
   year: getYearDataDirectory,
-  
+
   // 获取配置目录
   config: getConfigDirectory,
-  
+
   // 获取映射文件路径
   maps: {
-    account: () => getMapFilePath('account_map.json'),
-    category: () => getMapFilePath('category_map.json'),
-    budget: () => getMapFilePath('budget_config.json'),
+    account: () => getMapFilePath("account_map.json"),
+    category: () => getMapFilePath("category_map.json"),
+    budget: () => getMapFilePath("budget_config.json"),
   },
-  
+
   // 确保数据目录存在
   ensureDataDirectory: () => {
     ensureDirectoryExists(getDataDirectory());
   },
-  
+
   // 确保年份目录存在
   ensureYearDirectory: (year: number | string) => {
     const yearDir = getYearDataDirectory(year);
     ensureDirectoryExists(yearDir);
     return yearDir;
   },
-  
+
   // 确保预算配置文件存在
   ensureBudgetConfigExists: () => {
     const configPath = DATA_PATHS.maps.budget();
     try {
-      fs.readFileSync(configPath, 'utf-8');
+      fs.readFileSync(configPath, "utf-8");
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         // 如果文件不存在，创建默认配置
         const configDir = path.dirname(configPath);
         if (!fs.existsSync(configDir)) {
           fs.mkdirSync(configDir, { recursive: true });
         }
-        fs.writeFileSync(configPath, JSON.stringify({}, null, 2), 'utf-8');
+        fs.writeFileSync(configPath, JSON.stringify({}, null, 2), "utf-8");
       } else {
         throw error;
       }
@@ -113,5 +113,27 @@ export const DATA_PATHS = {
   },
 } as const;
 
+export const ASSETS_PATH = path.join(process.cwd(), "assets", "assets.csv");
+export const SNAPSHOTS_DIR = path.join(process.cwd(), "assets", "snapshots");
 
-export const ASSETS_PATH = path.join(process.cwd(), 'assets', 'assets.csv');
+/**
+ * 获取快照文件路径
+ */
+export function getSnapshotPath(date: string): string {
+  return path.join(SNAPSHOTS_DIR, `${date}.json`);
+}
+
+/**
+ * 获取所有快照文件路径
+ */
+export function getAllSnapshotPaths(): string[] {
+  if (!fs.existsSync(SNAPSHOTS_DIR)) {
+    return [];
+  }
+  return fs
+    .readdirSync(SNAPSHOTS_DIR)
+    .filter((f) => f.endsWith(".json"))
+    .map((f) => path.join(SNAPSHOTS_DIR, f))
+    .sort()
+    .reverse();
+}

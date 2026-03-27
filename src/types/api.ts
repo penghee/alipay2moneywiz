@@ -98,6 +98,7 @@ export interface Expense {
   tags: string;
   remark?: string;
   isRefund?: boolean;
+  isLargeExpense?: boolean; // 大额支出标记
   owner?: string;
   merchant: string;
   source: string;
@@ -191,3 +192,22 @@ export interface PreviewUploadResponse {
 }
 import type { InsightsData } from "@/lib/insights";
 export type InsightsResponse = InsightsData;
+
+// 月度报告类型
+export interface MonthlyReport {
+  month: string;
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  savingsRate: number;
+  largeExpenses: Expense[];
+  largeExpenseCount: number;
+  largeExpenseTotal: number;
+  topCategory: {
+    category: string;
+    amount: number;
+    percentage: number;
+  };
+  suggestions: string[];
+  overallScore: number; // 0-100
+}
