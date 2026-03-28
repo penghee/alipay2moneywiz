@@ -181,7 +181,7 @@ export function calculateMonthlyStats(
       };
 
       // 标记大额支出
-      if (Math.abs(amount) >= largeExpenseThreshold) {
+      if (amount < 0 && Math.abs(amount) >= largeExpenseThreshold) {
         expenseItem.isLargeExpense = true;
       }
 
@@ -303,7 +303,7 @@ export function calculateYearlyStats(
           account: t["账户"] || "",
         };
         // 标记大额支出
-        if (Math.abs(amount) >= largeExpenseThreshold) {
+        if (amount < 0 && Math.abs(amount) >= largeExpenseThreshold) {
           expense.isLargeExpense = true;
         }
         expenses.push(expense);
@@ -542,7 +542,7 @@ export function calculateCategoryYearlyStats(
       };
 
       // 标记大额支出
-      if (Math.abs(amount) >= largeExpenseThreshold) {
+      if (amount < 0 && Math.abs(amount) >= largeExpenseThreshold) {
         expense.isLargeExpense = true;
       }
 
