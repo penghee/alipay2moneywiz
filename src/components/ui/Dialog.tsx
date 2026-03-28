@@ -1,18 +1,20 @@
 import { useEffect } from "react";
 
-interface PreviewDialogProps {
+interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title?: string;
   children?: React.ReactNode;
+  hideFooter?: boolean;
 }
 
-export default function PreviewDialog({
+export default function Dialog({
   open,
   onOpenChange,
   title,
   children,
-}: PreviewDialogProps) {
+  hideFooter = false,
+}: DialogProps) {
   // Close on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -56,15 +58,17 @@ export default function PreviewDialog({
           <div className="flex-1 overflow-y-auto p-6">{children}</div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-3 p-4 border-t bg-gray-50 rounded-b-lg">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 flex items-center"
-            >
-              知道了
-            </button>
-          </div>
+          {!hideFooter && (
+            <div className="flex justify-end gap-3 p-4 border-t bg-gray-50 rounded-b-lg">
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 flex items-center"
+              >
+                知道了
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

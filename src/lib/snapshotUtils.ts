@@ -30,15 +30,21 @@ export function createSnapshot(
     owner: asset.owner,
   }));
 
-  const totalAssets = assets
-    .filter((a) => a.type !== "负债")
-    .reduce((sum, a) => sum + a.amount, 0);
+  const totalAssets = Number(
+    assets
+      .filter((a) => a.type !== "负债")
+      .reduce((sum, a) => sum + a.amount, 0)
+      .toFixed(2),
+  );
 
-  const totalLiabilities = assets
-    .filter((a) => a.type === "负债")
-    .reduce((sum, a) => sum + a.amount, 0);
+  const totalLiabilities = Number(
+    assets
+      .filter((a) => a.type === "负债")
+      .reduce((sum, a) => sum + a.amount, 0)
+      .toFixed(2),
+  );
 
-  const netWorth = totalAssets - totalLiabilities;
+  const netWorth = Number((totalAssets - totalLiabilities).toFixed(2));
 
   return {
     id: `snapshot-${date}`,
@@ -133,12 +139,17 @@ export function compareSnapshots(
   previousSnapshot?: AssetSnapshot,
 ): SnapshotComparison {
   const netWorthChange = previousSnapshot
-    ? currentSnapshot.netWorth - previousSnapshot.netWorth
+    ? Number((currentSnapshot.netWorth - previousSnapshot.netWorth).toFixed(2))
     : 0;
 
   const netWorthChangePercent = previousSnapshot
     ? previousSnapshot.netWorth !== 0
-      ? (netWorthChange / Math.abs(previousSnapshot.netWorth)) * 100
+      ? Number(
+          (
+            (netWorthChange / Math.abs(previousSnapshot.netWorth)) *
+            100
+          ).toFixed(2),
+        )
       : 0
     : 0;
 
@@ -188,9 +199,11 @@ export function compareSnapshots(
     const previousAmount = previousAssetsByName[name]?.amount || 0;
 
     if (currentAmount !== previousAmount) {
-      const change = currentAmount - previousAmount;
+      const change = Number((currentAmount - previousAmount).toFixed(2));
       const changePercent =
-        previousAmount !== 0 ? (change / Math.abs(previousAmount)) * 100 : 0;
+        previousAmount !== 0
+          ? Number(((change / Math.abs(previousAmount)) * 100).toFixed(2))
+          : 0;
 
       assetChanges.push({
         name,
@@ -227,7 +240,7 @@ export function getNetWorthTrend(
     const snapshot = snapshots[i];
     const previousSnapshot = snapshots[i + 1];
     const change = previousSnapshot
-      ? snapshot.netWorth - previousSnapshot.netWorth
+      ? Number((snapshot.netWorth - previousSnapshot.netWorth).toFixed(2))
       : 0;
 
     trend.push({

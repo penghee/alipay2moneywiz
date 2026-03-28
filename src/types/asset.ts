@@ -74,7 +74,7 @@ export interface AssetSnapshot {
 }
 
 export interface SnapshotItem {
-  type: "活期" | "投资" | "固定资产" | "应收" | "负债";
+  type: string;
   category: string;
   subcategory: string;
   name: string;
