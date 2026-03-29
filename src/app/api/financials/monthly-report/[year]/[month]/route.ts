@@ -89,7 +89,7 @@ export async function GET(
     }
 
     // 根据大额支出数量减分
-    score -= largeExpenses.length * 5; // 每笔-5分，最多-25分
+    score -= Math.min(5, largeExpenses.length) * 5; // 每笔-5分，最多-25分
 
     // 根据收支平衡加分
     if (stats.balance >= 0) {
