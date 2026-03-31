@@ -318,6 +318,21 @@ export class ApiClient {
     return result.months;
   }
 
+  // ========== CSV Delete ==========
+  async deleteMonthData(
+    year: number,
+    month: number,
+    owner?: string,
+  ): Promise<void> {
+    const queryParams = new URLSearchParams();
+    if (owner && owner !== "all") {
+      queryParams.append("owner", owner);
+    }
+    const queryString = queryParams.toString();
+    const url = `/api/delete-data/${year}/${month}${queryString ? `?${queryString}` : ""}`;
+    return this.request<void>(url, { method: "DELETE" });
+  }
+
   // ========== insights ==========
   async getInsights(year: number, owner?: string): Promise<InsightsResponse> {
     const queryParams = new URLSearchParams();

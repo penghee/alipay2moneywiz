@@ -40,6 +40,7 @@ import { formatMoney } from "@/lib/utils";
 import SankeyChart from "@/components/charts/SankeyChart";
 import PreviewDialog from "@/components/ui/Dialog";
 import ExpensePreview from "@/components/ExpensesPreview";
+import appConfig from "@/config/app_config.json";
 
 // Dynamically import client-side components
 const ThresholdSlider = dynamic(() => import("@/components/ThresholdSlider"), {
@@ -425,7 +426,9 @@ export default function MonthPage({
                   </p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-600">大额支出</p>
+                  <p className="text-xs text-gray-600">
+                    大额支出({`>${appConfig.largeExpenseThreshold?.default}`}元)
+                  </p>
                   <p
                     className={`text-lg font-semibold ${
                       monthlyReport.largeExpenseCount > 0
