@@ -202,6 +202,7 @@ export interface MonthlyReport {
   savingsRate: number;
   largeExpenses: Expense[];
   largeExpenseCount: number;
+  largeExpenseThreshold: number;
   largeExpenseTotal: number;
   topCategory: {
     category: string;

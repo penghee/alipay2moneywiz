@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { calculateMonthlyStats } from "@/lib/data";
 import { formatMoney } from "@/lib/utils";
-
+import appConfig from "@/config/app_config.json";
 /**
  * 生成月度财务报告
  */
@@ -110,6 +110,7 @@ export async function GET(
       topCategory,
       suggestions,
       overallScore: Math.round(score),
+      largeExpenseThreshold: appConfig?.largeExpenseThreshold?.default,
     };
 
     return NextResponse.json(report);
