@@ -42,3 +42,5 @@ Thumbs.db
 test_output/
 test_output_merged/
 test_*/
+*.xlsx
+*.csv

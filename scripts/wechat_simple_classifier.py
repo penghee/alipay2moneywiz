@@ -146,9 +146,10 @@ class WeChatSimpleClassifier:
         
         # 保存结果
         if output_path is None:
-            # 默认输出路径
-            base_name = os.path.splitext(os.path.basename(excel_path))[0]
-            output_path = os.path.join(os.path.dirname(excel_path), f"{base_name}_classified.xlsx")
+            return
+            # # 默认输出路径
+            # base_name = os.path.splitext(os.path.basename(excel_path))[0]
+            # output_path = os.path.join(os.path.dirname(excel_path), f"{base_name}_classified.xlsx")
             # output_path = os.path.join(os.path.dirname(excel_path), f"{base_name}_classified.csv")
         
         try:
@@ -349,8 +350,12 @@ def main():
         print("\n" + "="*80)
         print("开始正式分类...")
         
+        # 默认输出路径
+        base_name = os.path.splitext(os.path.basename(path))[0]
+        output_path = os.path.join(os.path.dirname(path), f"{base_name}_classified.xlsx")
+
         # 正式分类
-        result_df = classifier.classify_excel(path)
+        result_df = classifier.classify_excel(path, output_path)
         
         if not result_df.empty:
             print(f"\n分类完成！共处理 {len(result_df)} 条交易记录")
