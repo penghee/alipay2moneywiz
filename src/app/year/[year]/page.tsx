@@ -11,6 +11,8 @@ import {
   Filter,
   User,
   Tag,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import ownersData from "@/config/bill_owners.json";
@@ -65,6 +67,9 @@ export default function YearPage({
   const [selectedOwner, setSelectedOwner] = useState<string>("all");
   const [openPreview, setOpenPreview] = useState(false);
   const [previewExpenses, setPreviewExpenses] = useState<Expense[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [monthToDelete, setMonthToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
   const owners = useMemo(
@@ -133,6 +138,42 @@ export default function YearPage({
       }))
       .sort((a, b) => b.average - a.average);
   }, [stats]);
+
+  // Handle delete month data
+  const handleDeleteMonth = async (month: number) => {
+    if (!year) return;
+
+    try {
+      setIsDeleting(true);
+      await apiClient.deleteMonthData(year, month, selectedOwner);
+
+      // Refresh data after deletion
+      const [statsData, updatedMonths] = await Promise.all([
+        apiClient.getYearlyStats(year, selectedOwner),
+        apiClient.getMonthsInYear(year, selectedOwner),
+      ]);
+
+      setStats(statsData);
+      setMonths(updatedMonths);
+      setDeleteDialogOpen(false);
+      setMonthToDelete(null);
+
+      // Show success message (you could replace this with a toast notification)
+      alert(`成功删除 ${year}年${month}月 的数据`);
+    } catch (error) {
+      console.error("Failed to delete month data:", error);
+      alert("删除失败，请重试");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Open delete confirmation dialog
+  const openDeleteDialog = (month: number, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent navigation to month details
+    setMonthToDelete(month);
+    setDeleteDialogOpen(true);
+  };
 
   if (loading) {
     return (
@@ -573,14 +614,23 @@ export default function YearPage({
             {months.map((month) => (
               <div
                 key={month}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow relative group"
                 onClick={() =>
                   year && router.push(`/year/${year}/month/${month}`)
                 }
               >
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium text-gray-900">{month}月</h4>
-                  <span className="text-sm text-blue-600">查看详情 →</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-blue-600">查看详情 →</span>
+                    <button
+                      onClick={(e) => openDeleteDialog(month, e)}
+                      className="transition-opacity p-1 hover:bg-red-50 rounded-md"
+                      title="删除本月数据"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </button>
+                  </div>
                 </div>
                 <div className="text-sm text-gray-600">点击查看详细统计</div>
               </div>
@@ -594,6 +644,59 @@ export default function YearPage({
         title="交易预览"
       >
         <ExpensePreview expenses={previewExpenses} />
+      </PreviewDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <PreviewDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="确认删除"
+        hideFooter
+      >
+        <div className="p-6">
+          <div className="flex items-center mb-4">
+            <AlertTriangle className="h-6 w-6 text-red-500 mr-2" />
+            <h3 className="text-lg font-semibold text-gray-900">删除确认</h3>
+          </div>
+
+          <p className="text-gray-600 mb-6">
+            确定要删除 {year}年{monthToDelete}月 的所有数据吗？
+            <br />
+            <span className="text-red-500 font-medium">
+              此操作不可恢复，请谨慎操作！
+            </span>
+          </p>
+
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setMonthToDelete(null);
+              }}
+              disabled={isDeleting}
+              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50"
+            >
+              取消
+            </button>
+            <button
+              onClick={() => monthToDelete && handleDeleteMonth(monthToDelete)}
+              disabled={isDeleting}
+              className="px-4 py-2 text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  删除中...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  确认删除
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </PreviewDialog>
     </div>
   );

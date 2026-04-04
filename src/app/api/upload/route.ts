@@ -208,6 +208,7 @@ export async function processWechat(
     if (record["交易时间"] === "") {
       continue;
     }
+    console.log(record);
     const transaction: Record<string, string> = {};
     transaction["日期"] = parseDate(record["交易时间"] || "");
     transaction["描述"] = record["商品"] || "";

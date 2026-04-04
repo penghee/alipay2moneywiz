@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, existsSync } from "fs";
 import path from "path";
 import ownersData from "@/config/bill_owners.json";
 import categoryMap from "@/config/category_map.json";
+import appConfig from "@/config/app_config.json";
 import { getDataDirectory, getYearDataDirectory } from "@/config/paths";
 import { generateSankeyData } from "./sankeyUtils";
 import {
@@ -136,6 +137,10 @@ export function calculateMonthlyStats(
   const categoryStats: Record<string, CategoryStats> = {};
   const expenses: Expense[] = [];
 
+  // 读取大额支出阈值
+  const largeExpenseThreshold =
+    appConfig?.largeExpenseThreshold?.default || 300;
+
   transactions.forEach((t, index) => {
     // Skip transactions that don't match the owner filter
     if (ownerId) {
@@ -160,7 +165,7 @@ export function calculateMonthlyStats(
       expense += amount;
 
       // Add to expenses array
-      const expenseItem = {
+      const expenseItem: Expense = {
         id: `${year}-${String(month).padStart(2, "0")}-${index}`,
         amount: amount,
         isRefund: amount > 0,
@@ -174,6 +179,12 @@ export function calculateMonthlyStats(
         source: t["来源"] || "",
         account: t["账户"] || "",
       };
+
+      // 标记大额支出
+      if (amount < 0 && Math.abs(amount) >= largeExpenseThreshold) {
+        expenseItem.isLargeExpense = true;
+      }
+
       expenses.push(expenseItem);
 
       // Update category stats
@@ -247,6 +258,10 @@ export function calculateYearlyStats(
   // Prepare expenses data
   const expenses: Expense[] = [];
 
+  // 读取大额支出阈值
+  const largeExpenseThreshold =
+    appConfig?.largeExpenseThreshold?.default || 300;
+
   for (const file of csvFiles) {
     const month = parseInt(file.replace(".csv", ""));
     const filePath = path.join(dataDir, file);
@@ -273,7 +288,7 @@ export function calculateYearlyStats(
         monthIncome += amount;
       } else {
         monthExpense += amount;
-        const expense = {
+        const expense: Expense = {
           id: `${year}-${String(month).padStart(2, "0")}-${index}`,
           amount: amount, // Store as positive for consistency
           isRefund: amount > 0,
@@ -287,6 +302,10 @@ export function calculateYearlyStats(
           source: t["来源"] || "",
           account: t["账户"] || "",
         };
+        // 标记大额支出
+        if (amount < 0 && Math.abs(amount) >= largeExpenseThreshold) {
+          expense.isLargeExpense = true;
+        }
         expenses.push(expense);
         // 聚合分类统计
         if (!categoryStats[category]) {
@@ -483,6 +502,10 @@ export function calculateCategoryYearlyStats(
   // 获取所有支出记录并按金额降序排序
   const allExpenses: Expense[] = [];
 
+  // 读取大额支出阈值
+  const largeExpenseThreshold =
+    appConfig?.largeExpenseThreshold?.default || 300;
+
   // 使用新的函数读取并过滤CSV文件
   const transactions = readAndFilterCSVFiles(dataDir);
 
@@ -503,7 +526,7 @@ export function calculateCategoryYearlyStats(
     const category = t["分类"];
     if (isExpense(t)) {
       // 只处理支出
-      allExpenses.push({
+      const expense: Expense = {
         id: `${t.日期}-${t.描述}-${amount}`,
         date: t.日期,
         category: t.分类,
@@ -516,7 +539,14 @@ export function calculateCategoryYearlyStats(
         remark: t.备注 || "",
         source: t.来源 || "",
         account: t.账户 || "",
-      });
+      };
+
+      // 标记大额支出
+      if (amount < 0 && Math.abs(amount) >= largeExpenseThreshold) {
+        expense.isLargeExpense = true;
+      }
+
+      allExpenses.push(expense);
 
       const month = (new Date(t.日期).getMonth() + 1)
         .toString()

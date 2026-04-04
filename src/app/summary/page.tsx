@@ -6,9 +6,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FinancialNumber } from "@/components/FinancialNumber";
 import { Asset } from "@/types/asset";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Wallet, PiggyBank, Scale } from "lucide-react";
+import { Wallet, PiggyBank, Scale, Camera } from "lucide-react";
 import { AssetsTable } from "@/components/AssetsTable";
 import { apiClient } from "@/lib/apiClient";
+import { useRouter } from "next/navigation";
 import type {
   Summary as ApiSummary,
   YearlyStats as ApiYearlyStats,
@@ -68,6 +69,7 @@ const SankeyChart = dynamic(() => import("@/components/charts/SankeyChart"), {
 });
 
 export default function SummaryPage() {
+  const router = useRouter();
   const [data, setData] = useState<SummaryData | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -347,7 +349,16 @@ export default function SummaryPage() {
         </div>
         <div className="flex space-x-2">
           <button
-            className="flex items-center p-2 text-gray-500 hover:text-gray-700"
+            onClick={() => router.push("/snapshots")}
+            className="flex items-center p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            title="资产快照"
+          >
+            <Camera className="h-5 w-5" />
+            <span className="ml-2 text-sm">资产快照</span>
+          </button>
+
+          <button
+            className="flex items-center p-2 text-gray-400 hover:text-gray-500"
             title={showNumbers ? "隐藏数字" : "显示数字"}
             onClick={() => setShowNumbers(!showNumbers)}
           >

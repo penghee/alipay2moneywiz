@@ -5,6 +5,12 @@
     "max": 10000,
     "step": 10
   },
+  "largeExpenseThreshold": {
+    "default": 300,
+    "min": 0,
+    "max": 10000,
+    "step": 10
+  },
   "spendingAnalysis": {
     "singleTransactionThreshold": {
       "default": 5000,
